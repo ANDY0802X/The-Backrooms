@@ -5,10 +5,11 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1050;
+  z-index: 99999;
   padding: 16px;
 }
 
@@ -46,6 +47,7 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--bg-well);
+  flex-shrink: 0;
 }
 
 .trade-header-meta {

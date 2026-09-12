@@ -46,17 +46,21 @@ export default function Lobby({
   const [isPlacingPin, setIsPlacingPin] = useState(false);
   const [pinCoords, setPinCoords] = useState({ lat: 23.17504, lng: 80.02921 });
   const [activePinTab, setActivePinTab] = useState('room'); // 'room' | 'marketplace' | 'lostfound'
-  const [activeLostFoundPinId, setActiveLostFoundPinId] = useState(null);
-  const [activeTradePinId, setActiveTradePinId] = useState(null);
+  const [activeLostFoundPin, setActiveLostFoundPin] = useState(null);
+  const [activeTradePin, setActiveTradePin] = useState(null);
 
   // Reactively derive active pins from pins prop to ensure instant live comment updates
   const currentLostFoundPin = useMemo(() => {
-    return pins.find(p => p.id === activeLostFoundPinId) || null;
-  }, [pins, activeLostFoundPinId]);
+    if (!activeLostFoundPin) return null;
+    const targetId = activeLostFoundPin.id || activeLostFoundPin;
+    return pins.find(p => p.id === targetId) || (typeof activeLostFoundPin === 'object' ? activeLostFoundPin : null);
+  }, [pins, activeLostFoundPin]);
 
   const currentTradePin = useMemo(() => {
-    return pins.find(p => p.id === activeTradePinId) || null;
-  }, [pins, activeTradePinId]);
+    if (!activeTradePin) return null;
+    const targetId = activeTradePin.id || activeTradePin;
+    return pins.find(p => p.id === targetId) || (typeof activeTradePin === 'object' ? activeTradePin : null);
+  }, [pins, activeTradePin]);
 
   // New room/pin modal state
   const [newRoomName, setNewRoomName] = useState('');
@@ -87,11 +91,35 @@ export default function Lobby({
     return matchesCat && matchesSearch;
   });
 
+  const getRoomPurpose = (gameType, category) => {
+    if (category === 'Rant' || gameType === 'truthvent') {
+      return { icon: '💬', label: 'Vent & Truth', badgeClass: 'purpose-vent' };
+    }
+    switch (gameType) {
+      case 'trivia':
+        return { icon: '❓', label: 'Trivia Blitz', badgeClass: 'purpose-trivia' };
+      case 'wordchain':
+        return { icon: '🔗', label: 'Word Chain', badgeClass: 'purpose-chain' };
+      case 'emojipop':
+        return { icon: '🎮', label: 'Arcade Pop', badgeClass: 'purpose-arcade' };
+      case 'scribble':
+      default:
+        return { icon: '🎨', label: 'Doodle Canvas', badgeClass: 'purpose-doodle' };
+    }
+  };
+
   const handleCreateSubmit = (e) => {
     e.preventDefault();
     if (!newRoomName.trim()) return;
 
     sounds.playSuccess();
+
+    // Prevent marker stacking by adding slight jitter if at default center
+    const coords = { ...pinCoords };
+    if (Math.abs(coords.lat - 23.17504) < 0.00005 && Math.abs(coords.lng - 80.02921) < 0.00005) {
+      coords.lat += (Math.random() - 0.5) * 0.0012;
+      coords.lng += (Math.random() - 0.5) * 0.0012;
+    }
 
     if (activePinTab === 'room') {
       const roomPayload = {
@@ -103,31 +131,37 @@ export default function Lobby({
         tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean)
       };
 
-      if (typeof onCreateRoom === 'function') {
-        onCreateRoom(roomPayload);
-      }
-
-      if (typeof onCreatePin === 'function') {
-        onCreatePin({
-          title: newRoomName.trim(),
-          type: 'room',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
-          description: newRoomDesc.trim() || 'Live student lounge on campus.',
-          category: newRoomCategory,
-          user: userProfile
-        });
+      if (viewMode === 'list') {
+        if (typeof onCreateRoom === 'function') {
+          onCreateRoom(roomPayload);
+        }
+      } else {
+        // Map mode: atomically creates pin and linked room on server
+        if (typeof onCreatePin === 'function') {
+          onCreatePin({
+            title: newRoomName.trim(),
+            code: newRoomCode.trim().toUpperCase() || undefined,
+            type: 'room',
+            lat: coords.lat,
+            lng: coords.lng,
+            description: newRoomDesc.trim() || 'Live student lounge on campus.',
+            category: newRoomCategory,
+            selectedGame: newRoomGame,
+            tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean),
+            createdBy: userProfile
+          });
+        }
       }
     } else if (activePinTab === 'marketplace') {
       if (typeof onCreatePin === 'function') {
         onCreatePin({
           title: newRoomName.trim(),
           type: 'marketplace',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
+          lat: coords.lat,
+          lng: coords.lng,
           description: newRoomDesc.trim(),
           category: 'Marketplace',
-          user: userProfile,
+          createdBy: userProfile,
           marketData: {
             price: mktPrice.trim() || '$0',
             listingType: mktType,
@@ -141,13 +175,14 @@ export default function Lobby({
         onCreatePin({
           title: newRoomName.trim(),
           type: 'lostfound',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
+          lat: coords.lat,
+          lng: coords.lng,
           description: newRoomDesc.trim(),
           category: 'LostFound',
-          user: userProfile,
+          createdBy: userProfile,
           lostFoundData: {
             category: lfCategory,
+            dateHappened: lfDateLoc.trim() || 'Recently',
             dateLocation: lfDateLoc.trim() || 'Campus area',
             photoUrl: lfPhotoUrl.trim(),
             description: newRoomDesc.trim()
@@ -192,71 +227,6 @@ export default function Lobby({
     }
   };
 
-  const getRoomIcon = (gameType, category) => {
-    // Chat bubble — vent/general/rant rooms
-    if (category === 'Rant' || gameType === 'truthvent') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 8h36a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H16l-8 8V10a2 2 0 0 1 2-2z" />
-          <line x1="14" y1="18" x2="34" y2="18" />
-          <line x1="14" y1="26" x2="26" y2="26" />
-        </svg>
-      );
-    }
-    // Brush — art/doodle/scribble rooms
-    if (category === 'Art' || gameType === 'scribble') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M36 6l6 6-24 24-8 2 2-8L36 6z" />
-          <path d="M30 12l6 6" />
-          <path d="M6 40c4-2 8-1 10 2" strokeDasharray="3 2" />
-        </svg>
-      );
-    }
-    // Question mark — trivia rooms
-    if (gameType === 'trivia') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="24" cy="24" r="18" />
-          <path d="M18 19c0-3.3 2.7-6 6-6s6 2.7 6 6c0 4-6 5-6 10" />
-          <circle cx="24" cy="37" r="1.5" fill="currentColor" />
-        </svg>
-      );
-    }
-    // Chain link — word chain rooms
-    if (gameType === 'wordchain') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 30l-4 4a6 6 0 0 1-8.5-8.5l8-8A6 6 0 0 1 22 20" />
-          <path d="M30 18l4-4a6 6 0 0 1 8.5 8.5l-8 8A6 6 0 0 1 26 28" />
-        </svg>
-      );
-    }
-    // Controller — emojipop / arcade / mini-game rooms
-    if (gameType === 'emojipop' || category === 'Mini-Game') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="6" y="16" width="36" height="22" rx="8" />
-          <line x1="16" y1="22" x2="16" y2="32" />
-          <line x1="11" y1="27" x2="21" y2="27" />
-          <circle cx="32" cy="22" r="2" fill="currentColor" />
-          <circle cx="38" cy="27" r="2" fill="currentColor" />
-          <circle cx="32" cy="32" r="2" fill="currentColor" />
-          <circle cx="26" cy="27" r="2" fill="currentColor" />
-        </svg>
-      );
-    }
-    // Default — couch/sofa for general/study
-    return (
-      <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 28V20a4 4 0 0 1 8 0v4h20v-4a4 4 0 0 1 8 0v8" />
-        <rect x="4" y="28" width="40" height="8" rx="3" />
-        <line x1="12" y1="36" x2="12" y2="42" />
-        <line x1="36" y1="36" x2="36" y2="42" />
-      </svg>
-    );
-  };
-
   return (
     <div className="lobby-container">
       {/* Header */}
@@ -295,7 +265,11 @@ export default function Lobby({
         <section className="identity-banner glass-panel hover-lift" style={{ '--user-color': userProfile?.color || '#ff3b3b' }}>
           <div className="identity-info">
             <div className="identity-avatar-box">
-              <span>{userProfile?.avatar || '🐱'}</span>
+              {userProfile?.avatar && userProfile.avatar.startsWith('http') ? (
+                <img src={userProfile.avatar} alt="Avatar" className="identity-avatar-img" />
+              ) : (
+                <span>{userProfile?.avatar || '🐱'}</span>
+              )}
               <span className="identity-avatar-badge"></span>
             </div>
 
@@ -445,12 +419,13 @@ export default function Lobby({
               if (roomId) onJoinRoom(roomId);
             }}
             onOpenMarketplace={(pin) => {
-              setActiveTradePinId(pin?.id || pin);
+              setActiveTradePin(pin);
             }}
             onOpenLostFound={(pin) => {
-              setActiveLostFoundPinId(pin?.id || pin);
+              setActiveLostFoundPin(pin);
             }}
             isPlacingPin={isPlacingPin}
+            onStartPlacingPin={() => setIsPlacingPin(true)}
             onCancelPlacingPin={() => setIsPlacingPin(false)}
             onMapClickToPlace={(coords) => {
               setPinCoords(coords);
@@ -464,6 +439,7 @@ export default function Lobby({
           {filteredRooms.map((room, idx) => {
             const userCount = room.userCount !== undefined ? room.userCount : 1;
             const roomCode = room.code || room.id?.slice(0, 6)?.toUpperCase() || 'LOBBY';
+            const purpose = getRoomPurpose(room.selectedGame, room.category);
 
             return (
               <Reveal key={room.id} index={idx}>
@@ -476,8 +452,9 @@ export default function Lobby({
                   }}
                 >
                   <div className="room-card-top">
-                    <span className="room-card-game-badge">
-                      {getGameLabel(room.selectedGame)}
+                    <span className={`room-purpose-badge ${purpose.badgeClass}`} title={`Purpose: ${purpose.label}`}>
+                      <span>{purpose.icon}</span>
+                      <span>{purpose.label}</span>
                     </span>
                     <div className="room-user-badge">
                       <span className="pulsing-ping-dot"></span>
@@ -486,7 +463,7 @@ export default function Lobby({
                   </div>
 
                   <div className="room-code-badge-row">
-                    <span className="room-code-display">Code: #{roomCode}</span>
+                    <span className="room-code-display">Code: {roomCode}</span>
                     <motion.button
                       whileHover={{ scale: 1.08 }}
                       whileTap={{ scale: 0.92 }}
@@ -506,14 +483,6 @@ export default function Lobby({
                     <h3 className="room-card-title">{room.name}</h3>
                     <p className="room-card-desc">{room.description}</p>
                   </div>
-
-                  {room.tags && room.tags.length > 0 && (
-                    <div className="room-tag-pills">
-                      {room.tags.map((tag, i) => (
-                        <span key={i} className="room-tag hover-lift">#{tag}</span>
-                      ))}
-                    </div>
-                  )}
 
                   <div className="room-card-footer">
                     <motion.button
@@ -862,28 +831,34 @@ export default function Lobby({
       </AnimatePresence>
 
       {/* Lost & Found Comments Modal */}
-      {currentLostFoundPin && (
-        <LostFoundModal
-          pin={currentLostFoundPin}
-          userProfile={userProfile}
-          theme={theme}
-          onClose={() => setActiveLostFoundPinId(null)}
-          onAddComment={onAddLostFoundComment}
-          onResolve={onUpdatePin}
-        />
-      )}
+      <AnimatePresence>
+        {currentLostFoundPin && (
+          <LostFoundModal
+            key={currentLostFoundPin.id || 'lf-modal'}
+            pin={currentLostFoundPin}
+            userProfile={userProfile}
+            theme={theme}
+            onClose={() => setActiveLostFoundPin(null)}
+            onAddComment={onAddLostFoundComment}
+            onResolve={onUpdatePin}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Campus Marketplace & Trade Comments Modal */}
-      {currentTradePin && (
-        <TradeModal
-          pin={currentTradePin}
-          userProfile={userProfile}
-          theme={theme}
-          onClose={() => setActiveTradePinId(null)}
-          onAddComment={onAddTradeComment}
-          onJoinRoom={onJoinRoom}
-        />
-      )}
+      <AnimatePresence>
+        {currentTradePin && (
+          <TradeModal
+            key={currentTradePin.id || 'trade-modal'}
+            pin={currentTradePin}
+            userProfile={userProfile}
+            theme={theme}
+            onClose={() => setActiveTradePin(null)}
+            onAddComment={onAddTradeComment}
+            onJoinRoom={onJoinRoom}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

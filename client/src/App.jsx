@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import Landing from './components/Landing';
 import Lobby from './components/Lobby';
 import RoomView from './components/RoomView';
-import { generateAnonymousIdentity } from './utils/identity';
+import { generateAnonymousIdentity, getDiceBearAvatarUrl } from './utils/identity';
 import { sounds } from './utils/sound';
 
 const VIEW_ORDER = {
@@ -51,7 +51,11 @@ export default function App() {
     const saved = sessionStorage.getItem('soulnook_user');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && (!parsed.avatar || !parsed.avatar.startsWith('http'))) {
+          parsed.avatar = getDiceBearAvatarUrl(parsed.avatarSeed || parsed.name || 'gentle-cat');
+        }
+        return parsed;
       } catch (e) {}
     }
     return generateAnonymousIdentity();

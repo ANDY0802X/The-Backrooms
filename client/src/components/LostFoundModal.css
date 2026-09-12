@@ -5,17 +5,18 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1050;
+  z-index: 99999;
   padding: 16px;
 }
 
 .lf-modal-card {
   width: 100%;
   max-width: 520px;
-  max-height: 88vh;
+  max-height: 85vh;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg, 16px);
@@ -45,6 +46,7 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--bg-well);
+  flex-shrink: 0;
 }
 
 .lf-header-badge {
@@ -99,6 +101,7 @@
   flex-direction: column;
   gap: 14px;
   flex: 1;
+  min-height: 0;
 }
 
 .lf-post-title {
@@ -222,6 +225,7 @@
   border-top: 1px solid var(--border-subtle);
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .lf-comment-input {

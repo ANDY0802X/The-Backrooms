@@ -104,7 +104,11 @@ export default function TradeModal({
             <div className="trade-seller-row">
               <span>Listed by</span>
               <span className="trade-seller-pill">
-                <span>{pin.createdBy?.avatar || '👤'}</span>
+                {pin.createdBy?.avatar && pin.createdBy.avatar.startsWith('http') ? (
+                  <img src={pin.createdBy.avatar} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <span>{pin.createdBy?.avatar || '👤'}</span>
+                )}
                 <span>{pin.createdBy?.name || 'Campus Student'}</span>
               </span>
             </div>
@@ -140,8 +144,12 @@ export default function TradeModal({
                   comments.map((c, idx) => (
                     <div key={c.id || idx} className="trade-comment-item">
                       <div className="trade-comment-header">
-                        <div className="trade-comment-author">
-                          <span>{c.author?.avatar || '👤'}</span>
+                        <div className="trade-comment-author" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {c.author?.avatar && c.author.avatar.startsWith('http') ? (
+                            <img src={c.author.avatar} alt="" style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <span>{c.author?.avatar || '👤'}</span>
+                          )}
                           <span style={{ color: c.author?.color || 'var(--text-primary)' }}>
                             {c.author?.name || 'Student'}
                           </span>

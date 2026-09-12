@@ -9,6 +9,17 @@ import './CampusMap.css';
 // Default campus center (IIITDM Jabalpur from map.geojson)
 const CAMPUS_CENTER = [23.1750415, 80.029215];
 const DEFAULT_ZOOM = 16;
+const CARTO_API_KEY = 'cb1_3is0_1_3f7e9042a974f4b1055148a4';
+
+function getTileUrl(theme, provider) {
+  if (provider === 'esri') {
+    return theme === 'light'
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+  }
+  const style = theme === 'light' ? 'light_all' : 'dark_all';
+  return `https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`;
+}
 
 function escapeHtml(str) {
   return String(str || '')
@@ -26,6 +37,7 @@ export default function CampusMap({
   onOpenMarketplace,
   onOpenLostFound,
   isPlacingPin = false,
+  onStartPlacingPin,
   onCancelPlacingPin,
   onMapClickToPlace
 }) {
@@ -34,6 +46,14 @@ export default function CampusMap({
   const clusterGroupRef = useRef(null);
   const geojsonLayerRef = useRef(null);
   const currentTileLayerRef = useRef(null);
+
+  const isPlacingPinRef = useRef(isPlacingPin);
+  const onMapClickToPlaceRef = useRef(onMapClickToPlace);
+
+  useEffect(() => {
+    isPlacingPinRef.current = isPlacingPin;
+    onMapClickToPlaceRef.current = onMapClickToPlace;
+  }, [isPlacingPin, onMapClickToPlace]);
 
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'room' | 'marketplace' | 'lostfound'
   const [geojsonData, setGeojsonData] = useState(null);
@@ -75,14 +95,7 @@ export default function CampusMap({
       zoomDelta: 0.5
     });
 
-    // Helper to get tile URL matching theme and provider
-    const tileUrl = theme === 'light'
-      ? (basemapProvider === 'esri'
-          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')
-      : (basemapProvider === 'esri'
-          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-          : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+    const tileUrl = getTileUrl(theme, basemapProvider);
 
     const attribution = basemapProvider === 'esri'
       ? '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
@@ -141,13 +154,7 @@ export default function CampusMap({
       map.removeLayer(currentTileLayerRef.current);
     }
 
-    const tileUrl = theme === 'light'
-      ? (basemapProvider === 'esri'
-          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')
-      : (basemapProvider === 'esri'
-          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-          : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+    const tileUrl = getTileUrl(theme, basemapProvider);
 
     const attribution = basemapProvider === 'esri'
       ? '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
@@ -174,15 +181,19 @@ export default function CampusMap({
     const isLight = theme === 'light';
 
     const geojsonLayer = L.geoJSON(geojsonData, {
+      filter: (feature) => {
+        // Exclude Point features so Leaflet never creates default blue building markers
+        return feature.geometry?.type !== 'Point';
+      },
       style: (feature) => {
         const geomType = feature.geometry?.type;
         const props = feature.properties || {};
 
         if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
           return {
-            fillColor: isLight ? '#eae4d6' : '#140e10',
-            fillOpacity: isLight ? 0.75 : 0.75,
-            color: isLight ? 'rgba(26, 26, 26, 0.22)' : 'rgba(255, 59, 59, 0.28)',
+            fillColor: isLight ? '#eae4d6' : '#141212',
+            fillOpacity: isLight ? 0.82 : 0.82,
+            color: isLight ? 'rgba(17, 17, 17, 0.2)' : 'rgba(255, 255, 255, 0.12)',
             weight: 1.2,
             opacity: 0.9
           };
@@ -192,16 +203,16 @@ export default function CampusMap({
           const isFootway = props.highway === 'footway' || props.highway === 'path';
           return {
             color: isLight
-              ? (isFootway ? 'rgba(26, 26, 26, 0.22)' : 'rgba(26, 26, 26, 0.45)')
-              : (isFootway ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 59, 59, 0.45)'),
-            weight: isFootway ? 1.8 : 2.5,
+              ? (isFootway ? 'rgba(17, 17, 17, 0.28)' : 'rgba(17, 17, 17, 0.55)')
+              : (isFootway ? 'rgba(255, 255, 255, 0.22)' : 'rgba(229, 51, 58, 0.45)'),
+            weight: isFootway ? 1.6 : 2.2,
             opacity: 0.8,
             dashArray: isFootway ? '4, 4' : null
           };
         }
 
         return {
-          color: isLight ? '#a31d24' : '#ff3b3b',
+          color: isLight ? '#111111' : '#e5333a',
           weight: 2
         };
       },
@@ -219,6 +230,12 @@ export default function CampusMap({
 
         layer.on({
           click: (e) => {
+            if (isPlacingPinRef.current && typeof onMapClickToPlaceRef.current === 'function') {
+              if (e.latlng) {
+                onMapClickToPlaceRef.current({ lat: e.latlng.lat, lng: e.latlng.lng });
+                return;
+              }
+            }
             if (e.latlng) {
               map.flyTo(e.latlng, Math.max(map.getZoom(), 16.5), { duration: 0.6, easeLinearity: 0.25 });
             }
@@ -227,9 +244,9 @@ export default function CampusMap({
             const l = e.target;
             if (l.setStyle) {
               l.setStyle({
-                fillColor: isLight ? '#ded5c2' : '#2b1519',
-                fillOpacity: 0.9,
-                color: isLight ? '#18181b' : '#ff3b3b',
+                fillColor: isLight ? '#ded5c2' : '#221e20',
+                fillOpacity: 0.92,
+                color: isLight ? '#111111' : '#e5333a',
                 weight: 1.8
               });
             }
@@ -251,8 +268,8 @@ export default function CampusMap({
     if (!map) return;
 
     const handleMapClick = (e) => {
-      if (isPlacingPin && typeof onMapClickToPlace === 'function') {
-        onMapClickToPlace({ lat: e.latlng.lat, lng: e.latlng.lng });
+      if (isPlacingPinRef.current && typeof onMapClickToPlaceRef.current === 'function') {
+        onMapClickToPlaceRef.current({ lat: e.latlng.lat, lng: e.latlng.lng });
       }
     };
 
@@ -294,10 +311,15 @@ export default function CampusMap({
 
       // Icon HTML with Sleek Capsule Markers
       let iconInnerHtml = '';
+      const creatorAvatar = pin.createdBy?.avatar;
+      const avatarContent = (creatorAvatar && creatorAvatar.startsWith('http'))
+        ? `<img src="${escapeHtml(creatorAvatar)}" class="pin-avatar-thumb-img" alt="" />`
+        : `<span class="pin-icon-avatar-inner">🗣️</span>`;
+
       if (pin.type === 'room') {
         iconInnerHtml = `
           <div class="pin-marker-pill pin-type-room ${isLight ? 'pin-light-room' : 'pin-dark-room'}">
-            <div class="pin-icon-avatar">🗣️</div>
+            <div class="pin-icon-avatar">${avatarContent}</div>
             <span class="pin-label-title">${escapeHtml(pin.title)}</span>
             <span class="pin-pulse-dot" title="Live lounge"></span>
           </div>
@@ -332,14 +354,17 @@ export default function CampusMap({
 
       const marker = L.marker([lat, lng], { icon: customIcon });
 
-      // Click on pin flies smoothly to center it
       marker.on('click', () => {
-        map.flyTo([lat, lng], Math.max(map.getZoom(), 16.5), { duration: 0.6, easeLinearity: 0.25 });
+        if (pin.type === 'lostfound' && typeof onOpenLostFound === 'function') {
+          onOpenLostFound(pin);
+        }
       });
 
       // Popup Content Card styled with glass-panel design tokens
       const popupContainer = document.createElement('div');
       popupContainer.className = `pin-popup-card ${isLight ? 'popup-light' : 'popup-dark'}`;
+      L.DomEvent.disableClickPropagation(popupContainer);
+      L.DomEvent.disableScrollPropagation(popupContainer);
 
       let headerIconBg = isLight ? 'rgba(24, 24, 27, 0.08)' : 'rgba(255, 59, 59, 0.15)';
       let headerIconColor = isLight ? '#18181b' : '#ff3b3b';
@@ -425,48 +450,56 @@ export default function CampusMap({
         </div>
       `;
 
-      marker.bindPopup(popupContainer);
+      // Attach button actions directly to prevent race conditions or event leakage
+      const btnRoom = popupContainer.querySelector(`#btn-open-room-${pin.id}`);
+      if (btnRoom) {
+        btnRoom.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenRoom === 'function') {
+            onOpenRoom(pin.roomId || pin.id);
+          }
+        };
+      }
 
-      marker.on('popupopen', () => {
-        const btnRoom = document.getElementById(`btn-open-room-${pin.id}`);
-        if (btnRoom) {
-          btnRoom.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenRoom === 'function') {
-              onOpenRoom(pin.roomId || pin.id);
-            }
-          };
-        }
+      const btnMkt = popupContainer.querySelector(`#btn-open-mkt-${pin.id}`);
+      if (btnMkt) {
+        btnMkt.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenMarketplace === 'function') {
+            onOpenMarketplace(pin);
+          }
+        };
+      }
 
-        const btnMkt = document.getElementById(`btn-open-mkt-${pin.id}`);
-        if (btnMkt) {
-          btnMkt.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenMarketplace === 'function') {
-              onOpenMarketplace(pin);
-            }
-          };
-        }
+      const btnMktRoom = popupContainer.querySelector(`#btn-room-mkt-${pin.id}`);
+      if (btnMktRoom) {
+        btnMktRoom.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenRoom === 'function' && pin.roomId) {
+            onOpenRoom(pin.roomId);
+          }
+        };
+      }
 
-        const btnMktRoom = document.getElementById(`btn-room-mkt-${pin.id}`);
-        if (btnMktRoom) {
-          btnMktRoom.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenRoom === 'function' && pin.roomId) {
-              onOpenRoom(pin.roomId);
-            }
-          };
-        }
+      const btnLf = popupContainer.querySelector(`#btn-open-lf-${pin.id}`);
+      if (btnLf) {
+        btnLf.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenLostFound === 'function') {
+            onOpenLostFound(pin);
+          }
+        };
+      }
 
-        const btnLf = document.getElementById(`btn-open-lf-${pin.id}`);
-        if (btnLf) {
-          btnLf.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenLostFound === 'function') {
-              onOpenLostFound(pin);
-            }
-          };
-        }
+      marker.bindPopup(popupContainer, {
+        autoPan: true,
+        autoPanPadding: [40, 40],
+        closeButton: true,
+        offset: [0, -22]
       });
 
       clusterGroup.addLayer(marker);
@@ -503,7 +536,8 @@ export default function CampusMap({
             className={`map-chip-btn ${activeFilter === 'all' ? 'active' : ''}`}
             onClick={() => setActiveFilter('all')}
           >
-            <span>🌐 All Pins</span>
+            <span className="map-chip-dot"></span>
+            <span>ALL PINS</span>
             <span className="map-chip-count">{counts.all}</span>
           </button>
           <button
@@ -511,7 +545,8 @@ export default function CampusMap({
             className={`map-chip-btn chip-room ${activeFilter === 'room' ? 'active' : ''}`}
             onClick={() => setActiveFilter('room')}
           >
-            <span>🗣️ Social Lounges</span>
+            <span className="map-chip-dot"></span>
+            <span>LOUNGES</span>
             <span className="map-chip-count">{counts.room}</span>
           </button>
           <button
@@ -519,7 +554,8 @@ export default function CampusMap({
             className={`map-chip-btn chip-market ${activeFilter === 'marketplace' ? 'active' : ''}`}
             onClick={() => setActiveFilter('marketplace')}
           >
-            <span>🏷️ Campus Market</span>
+            <span className="map-chip-dot"></span>
+            <span>MARKET</span>
             <span className="map-chip-count">{counts.marketplace}</span>
           </button>
           <button
@@ -527,10 +563,27 @@ export default function CampusMap({
             className={`map-chip-btn chip-lostfound ${activeFilter === 'lostfound' ? 'active' : ''}`}
             onClick={() => setActiveFilter('lostfound')}
           >
-            <span>📝 Lost & Found</span>
+            <span className="map-chip-dot"></span>
+            <span>LOST &amp; FOUND</span>
             <span className="map-chip-count">{counts.lostfound}</span>
           </button>
         </div>
+
+        <button
+          type="button"
+          className={`map-chip-btn map-drop-pin-btn ${isPlacingPin ? 'active-placing' : ''}`}
+          onClick={() => {
+            if (isPlacingPin) {
+              if (typeof onCancelPlacingPin === 'function') onCancelPlacingPin();
+            } else {
+              if (typeof onStartPlacingPin === 'function') onStartPlacingPin();
+            }
+          }}
+          title={isPlacingPin ? 'Cancel Pin Drop' : 'Drop a Pin on Campus'}
+        >
+          <span>📍</span>
+          <span>{isPlacingPin ? 'CANCEL' : 'DROP PIN'}</span>
+        </button>
       </div>
 
       {/* Placing Pin Active Banner */}

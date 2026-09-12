@@ -76,31 +76,44 @@ export default function RoomView({
     targets: []
   });
 
+  // Live Poll State
+  const [currentPoll, setCurrentPoll] = useState(null);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+  const [isPollMinimized, setIsPollMinimized] = useState(false);
+  const [newPollQuestion, setNewPollQuestion] = useState('');
+  const [newPollOptions, setNewPollOptions] = useState(['', '']);
+
   // Canvas refs
   const canvasRef = useRef(null);
   const [brushColor, setBrushColor] = useState('#8b5cf6');
   const [brushWidth, setBrushWidth] = useState(4);
   const [isEraser, setIsEraser] = useState(false);
   const isDrawingRef = useRef(false);
+  const [isDrawingActive, setIsDrawingActive] = useState(false);
+  const drawingIdleTimerRef = useRef(null);
   const lastPointRef = useRef(null);
   const strokeHistoryRef = useRef([]);
 
-  // Toolbar auto-hide: hides while drawing, reappears on idle
-  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
-  const toolbarIdleTimerRef = useRef(null);
-
-  // Canvas stroke visual-fade loop (purely presentational — does NOT alter strokeHistoryRef)
-  const fadeRafRef = useRef(null);
-
   const messagesEndRef = useRef(null);
+  const chatScrollContainerRef = useRef(null);
+  const isUserScrolledUpRef = useRef(false);
   const typingTimeoutRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const handleChatScroll = () => {
+    const el = chatScrollContainerRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isUserScrolledUpRef.current = distanceToBottom > 80;
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    if (!isUserScrolledUpRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom(true);
   }, [messages]);
 
   // Copy Room Code
@@ -118,12 +131,29 @@ export default function RoomView({
   useEffect(() => {
     if (!socket) return;
 
+    // Gentle chime on room join
+    sounds.playJoin();
+
     socket.emit('join_room', { roomId, user: userProfile });
 
     socket.on('room_joined_data', (data) => {
       if (data.room) setRoomData(data.room);
       if (data.activeUsers) setActiveUsers(data.activeUsers);
-      if (data.recentMessages) setMessages(data.recentMessages);
+      if (data.currentPoll !== undefined) setCurrentPoll(data.currentPoll);
+      if (data.recentMessages) {
+        setMessages(data.recentMessages);
+        // Schedule auto-dissolve for existing ephemeral messages
+        data.recentMessages.forEach((msg) => {
+          if (msg.isEphemeral) {
+            const age = Date.now() - (msg.timestamp || Date.now());
+            const remaining = Math.max(800, 12000 - age);
+            setTimeout(() => {
+              setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+              sounds.playDissolve();
+            }, remaining);
+          }
+        });
+      }
       if (data.gameState) {
         setGameState(prev => ({ ...prev, ...data.gameState }));
       }
@@ -134,7 +164,7 @@ export default function RoomView({
 
     socket.on('user_joined', ({ user, activeUsers: usersList }) => {
       setActiveUsers(usersList || []);
-      sounds.playJoinChime();
+      sounds.playChime();
     });
 
     socket.on('user_left', ({ user, activeUsers: usersList }) => {
@@ -150,9 +180,13 @@ export default function RoomView({
       if (msg.sender?.name !== userProfile.name) {
         sounds.playPop();
       }
-      // Front-end only: fire dissolve chime 200ms before message vaporizes
+
+      // Auto-dissolve ephemeral message after 12s with soft dissolve chime
       if (msg.isEphemeral) {
-        setTimeout(() => sounds.playDissolve(), 11800);
+        setTimeout(() => {
+          setMessages(prev => prev.filter(m => m.id !== msg.id));
+          sounds.playDissolve();
+        }, 12000);
       }
     });
 
@@ -253,6 +287,10 @@ export default function RoomView({
       triggerReactionParticle('💥');
     });
 
+    socket.on('poll_updated', ({ poll }) => {
+      setCurrentPoll(poll);
+    });
+
     return () => {
       socket.off('room_joined_data');
       socket.off('user_joined');
@@ -273,6 +311,7 @@ export default function RoomView({
       socket.off('word_chain_update');
       socket.off('emoji_targets_respawn');
       socket.off('emoji_target_popped');
+      socket.off('poll_updated');
       socket.emit('leave_room', { roomId });
     };
   }, [socket, roomId, userProfile]);
@@ -312,29 +351,7 @@ export default function RoomView({
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-
-    // Visual-only canvas stroke fade — paints a near-transparent overlay each frame
-    // Does NOT read or mutate strokeHistoryRef; no effect on sync
-    const startFadeLoop = () => {
-      const step = () => {
-        const c = canvasRef.current;
-        if (!c) return;
-        const ctx = c.getContext('2d');
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = 'rgba(0,0,0,0.0015)'; // ~2-min full fade at 60fps
-        ctx.fillRect(0, 0, c.width, c.height);
-        ctx.restore();
-        fadeRafRef.current = requestAnimationFrame(step);
-      };
-      fadeRafRef.current = requestAnimationFrame(step);
-    };
-    startFadeLoop();
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (fadeRafRef.current) cancelAnimationFrame(fadeRafRef.current);
-    };
+    return () => window.removeEventListener('resize', resizeCanvas);
   }, []);
 
   const replayStrokes = (strokes) => {
@@ -343,11 +360,11 @@ export default function RoomView({
     const ctx = canvas.getContext('2d');
     strokeHistoryRef.current = strokes;
     strokes.forEach(stroke => {
-      drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser);
+      drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser, stroke.timestamp);
     });
   };
 
-  const drawSegment = (ctx, x1, y1, x2, y2, color, width, isErase) => {
+  const drawSegment = (ctx, x1, y1, x2, y2, color, width, isErase, strokeTimestamp = null) => {
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -359,6 +376,11 @@ export default function RoomView({
     } else {
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = color;
+      // Soft visual depth fade for older strokes over time (does not mutate stroke data or sync logic)
+      if (strokeTimestamp) {
+        const age = Date.now() - strokeTimestamp;
+        ctx.globalAlpha = Math.max(0.75, 1 - age / 180000);
+      }
     }
 
     ctx.beginPath();
@@ -372,7 +394,7 @@ export default function RoomView({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser);
+    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser, stroke.timestamp);
     strokeHistoryRef.current.push(stroke);
   };
 
@@ -387,7 +409,7 @@ export default function RoomView({
   const handleClearCanvasClick = () => {
     clearLocalCanvas();
     sounds.playPop();
-    if (socket) socket.emit('clear_canvas');
+    if (socket) socket.emit('clear_canvas', { roomId });
   };
 
   const getCanvasCoords = (e) => {
@@ -403,10 +425,9 @@ export default function RoomView({
 
   const startDrawing = (e) => {
     isDrawingRef.current = true;
+    setIsDrawingActive(true);
+    if (drawingIdleTimerRef.current) clearTimeout(drawingIdleTimerRef.current);
     lastPointRef.current = getCanvasCoords(e);
-    // Hide toolbar immediately when drawing starts
-    setIsToolbarVisible(false);
-    if (toolbarIdleTimerRef.current) clearTimeout(toolbarIdleTimerRef.current);
   };
 
   const draw = (e) => {
@@ -422,12 +443,13 @@ export default function RoomView({
       y2: coords.y,
       color: brushColor,
       width: brushWidth,
-      isEraser: isEraser
+      isEraser: isEraser,
+      timestamp: Date.now()
     };
 
-    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser);
+    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser, stroke.timestamp);
     strokeHistoryRef.current.push(stroke);
-    if (socket) socket.emit('draw_stroke', stroke);
+    if (socket) socket.emit('draw_stroke', { roomId, stroke });
 
     lastPointRef.current = coords;
   };
@@ -435,9 +457,10 @@ export default function RoomView({
   const stopDrawing = () => {
     isDrawingRef.current = false;
     lastPointRef.current = null;
-    // Reveal toolbar after 600ms idle
-    if (toolbarIdleTimerRef.current) clearTimeout(toolbarIdleTimerRef.current);
-    toolbarIdleTimerRef.current = setTimeout(() => setIsToolbarVisible(true), 600);
+    if (drawingIdleTimerRef.current) clearTimeout(drawingIdleTimerRef.current);
+    drawingIdleTimerRef.current = setTimeout(() => {
+      setIsDrawingActive(false);
+    }, 1100);
   };
 
   const exportCanvasSnapshot = () => {
@@ -455,7 +478,7 @@ export default function RoomView({
     const text = inputText.trim();
     if (!text || !socket) return;
 
-    socket.emit('send_message', { text, isEphemeral });
+    socket.emit('send_message', { roomId, text, isEphemeral });
     sounds.playSend();
     setInputText('');
     socket.emit('typing_status', { isTyping: false });
@@ -479,8 +502,13 @@ export default function RoomView({
   };
 
   const handleToggleGame = () => {
-    sounds.playPop();
-    if (socket) socket.emit('toggle_game');
+    if (gameState.isActive) {
+      sounds.playPop();
+      if (socket) socket.emit('toggle_game', {});
+    } else {
+      sounds.playSuccess();
+      if (socket) socket.emit('switch_game', { gameType: gameState.type });
+    }
   };
 
   const handleTriviaAnswer = (index) => {
@@ -498,7 +526,7 @@ export default function RoomView({
   const handleNextTruthVent = () => {
     if (socket) {
       sounds.playBoing();
-      socket.emit('next_truth_vent_prompt');
+      socket.emit('next_truth_vent_prompt', {});
     }
   };
 
@@ -515,8 +543,50 @@ export default function RoomView({
     if (!word || !socket) return;
 
     sounds.playPop();
-    socket.emit('send_message', { text: word });
+    socket.emit('wordchain_submit_word', { word });
     setGameState(prev => ({ ...prev, wordChainInput: '' }));
+  };
+
+  const handleCreatePollSubmit = (e) => {
+    e.preventDefault();
+    if (!socket || !newPollQuestion.trim()) return;
+
+    const validOptions = newPollOptions.map(o => o.trim()).filter(Boolean);
+    if (validOptions.length < 2) return;
+
+    sounds.playSuccess();
+    socket.emit('create_poll', {
+      roomId,
+      question: newPollQuestion.trim(),
+      options: validOptions
+    }, (res) => {
+      if (res?.success) {
+        setIsPollModalOpen(false);
+        setIsPollMinimized(false);
+        setNewPollQuestion('');
+        setNewPollOptions(['', '']);
+      }
+    });
+  };
+
+  const handleVotePollOption = (optionId) => {
+    if (!socket || !currentPoll || !currentPoll.isOpen) return;
+    sounds.playPop();
+    socket.emit('vote_poll', {
+      roomId,
+      pollId: currentPoll.id,
+      optionId,
+      voterId: userProfile?.id || userProfile?.name
+    });
+  };
+
+  const handleClosePoll = () => {
+    if (!socket || !currentPoll) return;
+    sounds.playBoing();
+    socket.emit('close_poll', {
+      roomId,
+      pollId: currentPoll.id
+    });
   };
 
   const displayRoomCode = roomData.code || roomId.replace('lounge-', '').slice(0, 6).toUpperCase();
@@ -560,6 +630,26 @@ export default function RoomView({
             <span>Code: #{displayRoomCode}</span>
             <span style={{ fontSize: '0.75rem' }}>{copiedCode ? '✓ Copied' : '📋'}</span>
           </motion.div>
+
+          {/* Room Poll Header Trigger */}
+          <motion.button
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            className="btn-pill-secondary hover-lift"
+            style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => {
+              sounds.playPop();
+              if (currentPoll) {
+                setIsPollMinimized(false);
+              } else {
+                setIsPollModalOpen(true);
+              }
+            }}
+            title="Room Poll"
+          >
+            <span>📊</span>
+            <span>{currentPoll ? (currentPoll.isOpen ? 'Poll Active' : 'Poll Results') : 'Poll'}</span>
+          </motion.button>
         </div>
 
         <div className="room-header-center">
@@ -594,11 +684,10 @@ export default function RoomView({
             <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{activeUsers.length || 1} online</span>
           </div>
 
-          {/* Connected User Avatars — glow intensity reflects room activity */}
+          {/* Connected User Avatars with activity-reflective aura glow */}
           <div
-            className="presence-avatars-list"
-            title="Active students in lounge"
-            style={{ '--activity-level': Math.min((activeUsers.length - 1) / 5, 1) }}
+            className={`presence-avatars-list ${(gameState.isActive || activeUsers.length >= 2) ? 'activity-active' : 'activity-calm'}`}
+            title={`Active students in lounge (${gameState.isActive ? 'Active Game In Progress' : 'Quiet Lounge'})`}
           >
             {activeUsers.slice(0, 5).map(u => (
               <motion.div
@@ -608,7 +697,11 @@ export default function RoomView({
                 style={{ borderColor: u.color || 'var(--accent-lavender)' }}
                 title={u.name}
               >
-                {u.avatar || '😴'}
+                {u.avatar && u.avatar.startsWith('http') ? (
+                  <img src={u.avatar} alt={u.name} className="presence-avatar-img" />
+                ) : (
+                  <span>{u.avatar || '😴'}</span>
+                )}
               </motion.div>
             ))}
           </div>
@@ -751,11 +844,8 @@ export default function RoomView({
                     onTouchEnd={stopDrawing}
                   />
 
-                  {/* Floating Drawing Toolbar — auto-hides while drawing */}
-                  <div
-                    className={`canvas-floating-toolbar${isToolbarVisible ? '' : ' toolbar-hidden'}`}
-                    onMouseEnter={() => setIsToolbarVisible(true)}
-                  >
+                  {/* Floating Drawing Toolbar (auto-hides when drawing, reappears on hover/idle) */}
+                  <div className={`canvas-floating-toolbar ${isDrawingActive ? 'toolbar-drawing-hidden' : ''}`}>
                     {PALETTE.map((c, i) => (
                       <motion.button
                         key={i}
@@ -819,13 +909,13 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="trivia-deck">
-                    <div className="game-deck-header">
+                  <div className="trivia-deck unified-game-frame">
+                    <div className="unified-game-header">
                       <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
                         ⚡ CAMPUS TRIVIA BLITZ
                       </span>
-                      <span className="game-timer-pill">
-                        ⏱️ {gameState.timeLeft}s left
+                      <span className="unified-game-timer">
+                        ⏱️ {gameState.timeLeft}s
                       </span>
                     </div>
 
@@ -886,14 +976,19 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="wordchain-deck">
-                    <div className="game-deck-header">
+                  <div className="wordchain-deck unified-game-frame">
+                    <div className="unified-game-header">
                       <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-sage)' }}>
                         🔗 RAPID WORD CHAIN
                       </span>
                       <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
                         🔥 Streak: {gameState.streakCount}x
                       </span>
+                      {gameState.isActive && (
+                        <span className="unified-game-timer">
+                          ⏱️ {gameState.timeLeft}s
+                        </span>
+                      )}
                     </div>
 
                     <div className="wordchain-hero-card">
@@ -958,13 +1053,18 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="emojipop-top-bar">
+                  <div className="emojipop-top-bar unified-game-header">
                     <span className="badge-pill" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)' }}>
                       💥 EMOJI POP REFLEX
                     </span>
                     {gameState.scores && gameState.scores[userProfile.name] !== undefined && (
                       <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
-                        Your Score: {gameState.scores[userProfile.name]} pts
+                        Score: {gameState.scores[userProfile.name]} pts
+                      </span>
+                    )}
+                    {gameState.isActive && (
+                      <span className="unified-game-timer">
+                        ⏱️ {gameState.timeLeft}s
                       </span>
                     )}
                   </div>
@@ -1021,14 +1121,22 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="truthvent-deck">
-                    <div className="game-deck-header">
+                  <div className="truthvent-deck unified-game-frame">
+                    <div className="unified-game-header">
                       <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
                         🎭 TRUTH, VENT & DARE
                       </span>
                       <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--accent-amber)' }}>
                         {gameState.prompt?.type || 'Vent'}
                       </span>
+                      <button
+                        type="button"
+                        className="unified-game-exit-btn"
+                        onClick={handleNextTruthVent}
+                        title="Roll next prompt"
+                      >
+                        🎲
+                      </button>
                     </div>
 
                     <div className="truthvent-card-content">
@@ -1075,13 +1183,134 @@ export default function RoomView({
               <span className="pulsing-ping-dot"></span>
               <span style={{ fontSize: '0.88rem', fontWeight: 700 }}>Real-Time Vent Feed</span>
             </div>
-            <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-sage)' }}>
-              🔒 Zero-Trace Chat
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className="room-poll-header-pill-btn"
+                onClick={() => {
+                  sounds.playPop();
+                  if (currentPoll) {
+                    setIsPollMinimized(prev => !prev);
+                  } else {
+                    setIsPollModalOpen(true);
+                  }
+                }}
+                title={currentPoll ? 'Toggle Room Poll' : 'Create a Room Poll'}
+              >
+                <span>📊</span>
+                <span>{currentPoll ? (currentPoll.isOpen ? 'Live Poll' : 'Poll Closed') : '+ Poll'}</span>
+              </button>
+              <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-sage)' }}>
+                🔒 Zero-Trace Chat
+              </span>
+            </div>
           </div>
 
-          {/* Messages Feed */}
-          <div className="chat-messages-container">
+          {/* Active Poll Widget in Chat Pane */}
+          <AnimatePresence>
+            {currentPoll && (
+              <motion.div
+                className={`room-active-poll-card ${!currentPoll.isOpen ? 'poll-closed' : ''}`}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.24 }}
+              >
+                <div className="poll-card-top-strip">
+                  <div className="poll-card-badge-row">
+                    <span className={`poll-status-chip ${currentPoll.isOpen ? 'chip-live' : 'chip-ended'}`}>
+                      {currentPoll.isOpen ? '🔴 LIVE POLL' : '✓ CONCLUDED'}
+                    </span>
+                    <span className="poll-creator-credit">By {currentPoll.createdBy || 'Student'}</span>
+                  </div>
+                  <div className="poll-header-actions">
+                    <button
+                      type="button"
+                      className="poll-action-icon-btn"
+                      onClick={() => setIsPollMinimized(prev => !prev)}
+                      title={isPollMinimized ? 'Expand Poll' : 'Minimize Poll'}
+                    >
+                      {isPollMinimized ? '▼' : '▲'}
+                    </button>
+                    {currentPoll.isOpen ? (
+                      <button
+                        type="button"
+                        className="poll-end-btn"
+                        onClick={handleClosePoll}
+                        title="End this poll"
+                      >
+                        End
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="poll-new-trigger-btn"
+                        onClick={() => setIsPollModalOpen(true)}
+                        title="Start a new poll"
+                      >
+                        + New
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {!isPollMinimized && (
+                  <div className="poll-card-content-area">
+                    <h4 className="poll-question-text">{currentPoll.question}</h4>
+
+                    <div className="poll-options-list">
+                      {(() => {
+                        const totalVotes = currentPoll.options.reduce((sum, o) => sum + (o.votes || 0), 0);
+                        const myVoterId = userProfile?.id || userProfile?.name;
+
+                        return currentPoll.options.map((opt) => {
+                          const hasVoted = opt.voterIds && opt.voterIds.includes(myVoterId);
+                          const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              className={`poll-option-row ${hasVoted ? 'voted-option' : ''} ${!currentPoll.isOpen ? 'disabled-voting' : ''}`}
+                              onClick={() => {
+                                if (currentPoll.isOpen) handleVotePollOption(opt.id);
+                              }}
+                              disabled={!currentPoll.isOpen}
+                              title={currentPoll.isOpen ? (hasVoted ? 'Your current vote (click another to switch)' : 'Click to vote') : 'Poll closed'}
+                            >
+                              <div className="poll-option-fill-bar" style={{ width: `${pct}%` }} />
+                              <div className="poll-option-content">
+                                <span className="poll-option-text">
+                                  {hasVoted && <span className="poll-check-mark">✓ </span>}
+                                  {opt.text}
+                                </span>
+                                <span className="poll-option-stats">
+                                  <strong className="poll-pct">{pct}%</strong>
+                                  <span className="poll-count">({opt.votes || 0})</span>
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+
+                    <div className="poll-card-footer">
+                      <span className="poll-total-votes">
+                        {currentPoll.options.reduce((sum, o) => sum + (o.votes || 0), 0)} total vote{currentPoll.options.reduce((sum, o) => sum + (o.votes || 0), 0) === 1 ? '' : 's'}
+                      </span>
+                      {currentPoll.isOpen && (
+                        <span className="poll-hint-tap">Click any option to vote</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Messages Feed (fully scrollable, zero interference with input form) */}
+          <div className="chat-messages-container" ref={chatScrollContainerRef} onScroll={handleChatScroll}>
             <AnimatePresence initial={false}>
               {messages.map((m) => {
                 if (m.isSystem) {
@@ -1111,8 +1340,13 @@ export default function RoomView({
                     className={`chat-bubble ${isOwn ? 'own' : 'other'} ${m.isEphemeral ? 'ephemeral-dissolve-bubble' : ''} hover-lift`}
                   >
                     <div className="chat-bubble-meta">
-                      <span style={{ color: m.sender?.color || 'var(--accent-lavender)', fontWeight: 700 }}>
-                        {m.sender?.avatar || '😴'} {m.sender?.name || 'Anonymous'}
+                      <span style={{ color: m.sender?.color || 'var(--text-primary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        {m.sender?.avatar && m.sender.avatar.startsWith('http') ? (
+                          <img src={m.sender.avatar} alt="" className="chat-avatar-inline" />
+                        ) : (
+                          <span>{m.sender?.avatar || '😴'}</span>
+                        )}
+                        <span>{m.sender?.name || 'Anonymous'}</span>
                       </span>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
                         {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1184,6 +1418,121 @@ export default function RoomView({
           </form>
         </section>
       </main>
+
+      {/* Create Poll Modal */}
+      <AnimatePresence>
+        {isPollModalOpen && (
+          <motion.div
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsPollModalOpen(false)}
+          >
+            <motion.div
+              className="modal-card"
+              initial={{ opacity: 0, scale: 0.94, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">📊 Create Room Poll</h3>
+                <button
+                  type="button"
+                  className="btn-pill-icon"
+                  onClick={() => setIsPollModalOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleCreatePollSubmit}>
+                <div className="modal-form-group">
+                  <label className="modal-label">Question / Topic *</label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    placeholder="e.g. Coffee run to Nescafe or Bubble tea?"
+                    value={newPollQuestion}
+                    onChange={(e) => setNewPollQuestion(e.target.value)}
+                    required
+                    autoFocus
+                    maxLength={120}
+                  />
+                </div>
+
+                <div className="modal-form-group">
+                  <label className="modal-label">Poll Choices (2-5 options)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {newPollOptions.map((opt, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          className="modal-input"
+                          placeholder={`Option ${idx + 1}`}
+                          value={opt}
+                          onChange={(e) => {
+                            const updated = [...newPollOptions];
+                            updated[idx] = e.target.value;
+                            setNewPollOptions(updated);
+                          }}
+                          required={idx < 2}
+                          maxLength={60}
+                        />
+                        {newPollOptions.length > 2 && (
+                          <button
+                            type="button"
+                            className="btn-pill-secondary"
+                            style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444' }}
+                            onClick={() => {
+                              setNewPollOptions(newPollOptions.filter((_, i) => i !== idx));
+                            }}
+                            title="Remove option"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {newPollOptions.length < 5 && (
+                    <button
+                      type="button"
+                      className="btn-pill-secondary"
+                      style={{ marginTop: '10px', width: '100%', justifyContent: 'center', padding: '6px 12px', fontSize: '0.78rem' }}
+                      onClick={() => {
+                        sounds.playPop();
+                        setNewPollOptions([...newPollOptions, '']);
+                      }}
+                    >
+                      + Add Option
+                    </button>
+                  )}
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: '18px' }}>
+                  <button
+                    type="button"
+                    className="btn-pill-secondary"
+                    onClick={() => setIsPollModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-pill-primary"
+                  >
+                    Launch Live Poll ➔
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

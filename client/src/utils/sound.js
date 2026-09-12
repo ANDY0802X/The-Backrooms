@@ -130,6 +130,11 @@ class SoundEngine {
     });
   }
 
+  // Soft Warm Lounge Entrance Chime
+  playJoinChime() {
+    this.playChime();
+  }
+
   // High Score / Game Victory Fanfare
   playSuccess() {
     if (this.isMuted) return;
@@ -154,6 +159,61 @@ class SoundEngine {
 
       osc.start(now + idx * 0.06);
       osc.stop(now + idx * 0.06 + 0.65);
+    });
+  }
+
+  // Soft Dissolve Chime (Plays when 12s ephemeral message vaporizes)
+  playDissolve() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const notes = [987.77, 783.99, 659.25, 493.88]; // B5 -> G5 -> E5 -> B4 ethereal descent
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.88, now + idx * 0.04 + 0.35);
+
+      gain.gain.setValueAtTime(0.06, now + idx * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + 0.38);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.04);
+      osc.stop(now + idx * 0.04 + 0.4);
+    });
+  }
+
+  // Gentle Room Join Chime (Warm welcoming entrance tone)
+  playJoin() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const notes = [392.00, 523.25, 659.25, 783.99]; // G4, C5, E5, G5 warm welcome arpeggio
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+      gain.gain.setValueAtTime(0.1, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.55);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.6);
     });
   }
 
@@ -206,61 +266,6 @@ class SoundEngine {
       this.ambientGain = null;
     }
     this.isAmbientPlaying = false;
-  }
-
-  // Soft Dissolve Chime — descending glassy tone, fired when ephemeral message vanishes
-  playDissolve() {
-    if (this.isMuted) return;
-    this.init();
-    if (!this.ctx) return;
-
-    const now = this.ctx.currentTime;
-    // Two overlapping sine tones descending — like a fading ember
-    [[880, 440], [660, 330]].forEach(([startFreq, endFreq], i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const delay = i * 0.08;
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(startFreq, now + delay);
-      osc.frequency.exponentialRampToValueAtTime(endFreq, now + delay + 0.55);
-
-      gain.gain.setValueAtTime(0.0, now + delay);
-      gain.gain.linearRampToValueAtTime(0.07, now + delay + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.6);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + delay);
-      osc.stop(now + delay + 0.65);
-    });
-  }
-
-  // Gentle Room Join Bell — soft two-tone ascending chime, warmer than playChime()
-  playJoinChime() {
-    if (this.isMuted) return;
-    this.init();
-    if (!this.ctx) return;
-
-    const now = this.ctx.currentTime;
-    // Gentle pentatonic pair — C5 → E5
-    [523.25, 659.25].forEach((freq, i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const delay = i * 0.12;
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + delay);
-
-      gain.gain.setValueAtTime(0.0, now + delay);
-      gain.gain.linearRampToValueAtTime(0.09, now + delay + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.55);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + delay);
-      osc.stop(now + delay + 0.6);
-    });
   }
 }
 

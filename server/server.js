@@ -1302,6 +1302,7 @@ io.on('connection', (socket) => {
         tags: room.tags
       },
       activeUsers: Array.from(room.users.values()),
+      currentPoll: room.currentPoll || null,
       canvasStrokes: room.canvasStrokes,
       recentMessages: room.messages.slice(-50),
       gameState: {
@@ -1524,6 +1525,129 @@ io.on('connection', (socket) => {
       userName: currentUser.name,
       id: Math.random()
     });
+  });
+
+  // Room Poll Feature (Real-Time Live Polls)
+  socket.on('create_poll', ({ roomId, question, options }, callback) => {
+    const targetRoomId = roomId || currentRoomId;
+    if (!targetRoomId) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Room ID required' });
+      return;
+    }
+    const room = rooms.get(targetRoomId);
+    if (!room) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Room not found' });
+      return;
+    }
+    if (!question || !question.trim()) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Poll question is required' });
+      return;
+    }
+    const cleanOptions = (Array.isArray(options) ? options : [])
+      .map((opt) => (typeof opt === 'string' ? opt.trim() : (opt?.text || '').trim()))
+      .filter(Boolean);
+
+    if (cleanOptions.length < 2) {
+      if (typeof callback === 'function') callback({ success: false, error: 'At least 2 options required' });
+      return;
+    }
+
+    const poll = {
+      id: `poll-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      question: question.trim(),
+      options: cleanOptions.map((text, idx) => ({
+        id: `opt-${idx}-${Date.now()}`,
+        text,
+        votes: 0,
+        voterIds: []
+      })),
+      createdBy: currentUser?.name || 'Student',
+      creatorId: currentUser?.id || socket.id,
+      createdAt: Date.now(),
+      isOpen: true
+    };
+
+    room.currentPoll = poll;
+    io.to(targetRoomId).emit('poll_updated', { poll });
+
+    const sysMsg = {
+      id: `sys-poll-${Date.now()}`,
+      sender: { name: '📊 Room Poll', color: '#38bdf8', avatar: '📊' },
+      text: `New live poll opened: "${poll.question}"`,
+      timestamp: Date.now(),
+      isSystem: true
+    };
+    room.messages.push(sysMsg);
+    io.to(targetRoomId).emit('new_message', sysMsg);
+
+    if (typeof callback === 'function') {
+      callback({ success: true, poll });
+    }
+  });
+
+  socket.on('vote_poll', ({ roomId, pollId, optionId, voterId }, callback) => {
+    const targetRoomId = roomId || currentRoomId;
+    if (!targetRoomId) return;
+    const room = rooms.get(targetRoomId);
+    if (!room || !room.currentPoll || room.currentPoll.id !== pollId || !room.currentPoll.isOpen) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Poll not active' });
+      return;
+    }
+
+    const poll = room.currentPoll;
+    const effectiveVoterId = voterId || currentUser?.id || currentUser?.name || socket.id;
+
+    const targetOpt = poll.options.find(o => o.id === optionId);
+    if (!targetOpt) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Option not found' });
+      return;
+    }
+
+    // Remove previous votes by this user across all options in this poll
+    poll.options.forEach(opt => {
+      const idx = opt.voterIds.indexOf(effectiveVoterId);
+      if (idx !== -1) {
+        opt.voterIds.splice(idx, 1);
+        opt.votes = Math.max(0, opt.votes - 1);
+      }
+    });
+
+    // Cast vote
+    targetOpt.voterIds.push(effectiveVoterId);
+    targetOpt.votes += 1;
+
+    io.to(targetRoomId).emit('poll_updated', { poll });
+    if (typeof callback === 'function') {
+      callback({ success: true, poll });
+    }
+  });
+
+  socket.on('close_poll', ({ roomId, pollId }, callback) => {
+    const targetRoomId = roomId || currentRoomId;
+    if (!targetRoomId) return;
+    const room = rooms.get(targetRoomId);
+    if (!room || !room.currentPoll || room.currentPoll.id !== pollId) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Poll not found' });
+      return;
+    }
+
+    room.currentPoll.isOpen = false;
+    io.to(targetRoomId).emit('poll_updated', { poll: room.currentPoll });
+
+    const totalVotes = room.currentPoll.options.reduce((sum, o) => sum + o.votes, 0);
+    const sysMsg = {
+      id: `sys-poll-close-${Date.now()}`,
+      sender: { name: '📊 Room Poll', color: '#94a3b8', avatar: '📊' },
+      text: `Poll closed with ${totalVotes} total vote${totalVotes === 1 ? '' : 's'}.`,
+      timestamp: Date.now(),
+      isSystem: true
+    };
+    room.messages.push(sysMsg);
+    io.to(targetRoomId).emit('new_message', sysMsg);
+
+    if (typeof callback === 'function') {
+      callback({ success: true, poll: room.currentPoll });
+    }
   });
 
   const handleLeave = () => {
