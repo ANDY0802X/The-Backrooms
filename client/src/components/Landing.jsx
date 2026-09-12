@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './Landing.css';
 import { sounds } from '../utils/sound';
 import { AVATARS, generateAnonymousIdentity } from '../utils/identity';
+import Reveal from './Reveal';
 
 export default function Landing({
   onEnterLounge,
@@ -20,11 +21,20 @@ export default function Landing({
   const displayName = userProfile?.name !== undefined ? userProfile.name : '';
   const currentAvatar = userProfile?.avatar || '😴';
 
-  // Cycle avatar
-  const handleCycleAvatar = () => {
+  // Cycle avatar left / right
+  const handlePrevAvatar = () => {
     sounds.playPop();
     const idx = AVATARS.indexOf(currentAvatar);
-    const newIdx = (idx + 1) % AVATARS.length;
+    const newIdx = idx <= 0 ? AVATARS.length - 1 : idx - 1;
+    if (typeof onUpdateUserProfile === 'function') {
+      onUpdateUserProfile({ ...userProfile, avatar: AVATARS[newIdx] });
+    }
+  };
+
+  const handleNextAvatar = () => {
+    sounds.playPop();
+    const idx = AVATARS.indexOf(currentAvatar);
+    const newIdx = idx >= AVATARS.length - 1 ? 0 : idx + 1;
     if (typeof onUpdateUserProfile === 'function') {
       onUpdateUserProfile({ ...userProfile, avatar: AVATARS[newIdx] });
     }
@@ -37,8 +47,7 @@ export default function Landing({
     }
   };
 
-  const handleEnter = (e) => {
-    if (e) e.preventDefault();
+  const handleEnter = () => {
     sounds.playChime();
     if (!userProfile?.name?.trim()) {
       const generated = generateAnonymousIdentity();
@@ -48,6 +57,15 @@ export default function Landing({
     }
     if (typeof onEnterLounge === 'function') {
       onEnterLounge();
+    }
+  };
+
+  const handleCreate = () => {
+    sounds.playSuccess();
+    if (typeof onCreateLoungeDirect === 'function') {
+      onCreateLoungeDirect();
+    } else if (typeof onEnterLounge === 'function') {
+      onEnterLounge({ openCreate: true });
     }
   };
 
@@ -61,189 +79,271 @@ export default function Landing({
   };
 
   return (
-    <div className="landing-shell">
-      {/* Ambient Backdrop */}
-      <div className="landing-ambient-canvas" aria-hidden="true">
-        <div className="landing-radial-glow"></div>
-        <div className="landing-dot-grid"></div>
+    <div className="landing-viewport">
+      {/* Background Floating Outline Doodles */}
+      <div className="doodle-backdrop" aria-hidden="true">
+        <div className="floating-doodle" style={{ top: '14%', left: '8%' }}>
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="var(--doodle-color)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 36L6 14L16 24L24 10L32 24L42 14L40 36H8Z" />
+            <circle cx="24" cy="9" r="2" fill="var(--doodle-color)" />
+          </svg>
+        </div>
+        <div className="floating-doodle" style={{ top: '56%', left: '6%', animationDelay: '-2s' }}>
+          <svg width="42" height="42" viewBox="0 0 48 48" fill="none" stroke="var(--doodle-color)" strokeWidth="1.8" strokeLinecap="round">
+            <circle cx="24" cy="24" r="18" />
+            <circle cx="18" cy="20" r="2" fill="var(--doodle-color)" />
+            <circle cx="30" cy="20" r="2" fill="var(--doodle-color)" />
+            <path d="M16 28C18 33 30 33 32 28" />
+          </svg>
+        </div>
+        <div className="floating-doodle" style={{ bottom: '10%', left: '9%', animationDelay: '-4s' }}>
+          <svg width="42" height="42" viewBox="0 0 48 48" fill="none" stroke="var(--doodle-color)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 38V22L6 10L18 16C20 15 28 15 30 16L42 10L38 22V38H10Z" />
+            <circle cx="18" cy="26" r="1.5" fill="var(--doodle-color)" />
+            <circle cx="30" cy="26" r="1.5" fill="var(--doodle-color)" />
+            <path d="M22 30L24 32L26 30" />
+          </svg>
+        </div>
+        <div className="floating-doodle" style={{ top: '15%', right: '10%', animationDelay: '-3s' }}>
+          <svg width="42" height="42" viewBox="0 0 48 48" fill="none" stroke="var(--doodle-color)" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M12 34C8 34 6 30 7 26C8 22 12 21 14 21C16 14 26 13 30 18C34 16 40 19 40 24C43 26 42 34 36 34H12Z" />
+          </svg>
+        </div>
+        <div className="floating-doodle" style={{ bottom: '12%', right: '8%', animationDelay: '-5s' }}>
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="var(--doodle-color)" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M10 18H36V32C36 37 31 41 24 41C17 41 12 37 10 32V18Z" />
+            <path d="M36 22H40C42 22 44 24 44 27C44 30 42 32 40 32H36" />
+          </svg>
+        </div>
       </div>
 
-      {/* Minimal Top Navigation */}
-      <header className="landing-header">
-        <div className="landing-brand">
-          <span className="brand-dot"></span>
-          <span className="brand-name">TheBackrooms</span>
+      {/* Header Bar */}
+      <header className="landing-nav">
+        <div className="brand-wrapper hover-lift">
+          <div className="brand-icon-box">🌌</div>
+          <h2 className="brand-title">TheBackrooms</h2>
         </div>
 
-        <div className="landing-header-controls">
-          <button
-            type="button"
-            className="quiet-icon-btn"
+        <div className="nav-actions">
+          <motion.button
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.94 }}
+            className="btn-pill-secondary"
             onClick={() => {
               sounds.playPop();
               if (typeof onToggleTheme === 'function') onToggleTheme();
             }}
-            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-            aria-label="Toggle Theme"
+            title="Toggle Light / Dark Mode"
           >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
-          <button
-            type="button"
-            className="quiet-icon-btn"
+            {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.94 }}
+            className="btn-pill-secondary"
             onClick={() => {
               sounds.playBoing();
               sounds.toggleAmbient();
             }}
             title="Toggle Ambient Lo-Fi"
-            aria-label="Toggle Ambient Music"
           >
-            🎵
-          </button>
+            🎵 Lo-Fi
+          </motion.button>
         </div>
       </header>
 
-      {/* Main Focus Area: Headline, One Input, One Primary Action */}
-      <main className="landing-center-stage">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="landing-hero-block"
-        >
-          <div className="landing-kicker font-mono">
-            <span>EPHEMERAL CAMPUS SANCTUARY</span>
+      {/* Center Card Stage with Staggered Scroll Reveals */}
+      <main className="landing-stage">
+        {/* Top Tag */}
+        <Reveal index={0}>
+          <div className="backrooms-tag-pill hover-lift">
+            <span>✨ CAMPUS DECOMPRESSION LOUNGE</span>
           </div>
+        </Reveal>
 
-          <h1 className="landing-headline">
-            A quieter space to unwind.
-          </h1>
+        {/* Big Title */}
+        <Reveal index={1}>
+          <h1 className="backrooms-hero-title">The Backrooms</h1>
+        </Reveal>
 
-          <p className="landing-subhead">
-            Zero logins. Anonymous student lounges to vent freely, co-draw on a shared canvas, and play low-stakes games. Everything disappears when the room empties.
+        {/* Subtitle */}
+        <Reveal index={2}>
+          <p className="backrooms-hero-sub">
+            Zero logins. Zero records. Instant anonymous venting & doodle lounges.
           </p>
-        </motion.div>
+        </Reveal>
 
-        {/* Unified Identity Card (Linear / Apple Minimalism) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          className="landing-action-card"
-        >
-          <form onSubmit={handleEnter} className="landing-entry-form">
-            {/* Unified Identity Input Row */}
-            <div className="identity-input-wrapper">
-              <button
-                type="button"
-                className="avatar-bubble-trigger"
-                onClick={handleCycleAvatar}
-                title="Click to cycle avatar"
-                aria-label="Cycle avatar emoji"
-              >
-                <span className="avatar-emoji">{currentAvatar}</span>
-              </button>
-
-              <div className="alias-field-container">
-                <input
-                  type="text"
-                  className="alias-text-input"
-                  placeholder="Choose an alias or stay random..."
-                  value={displayName}
-                  onChange={(e) => {
-                    if (typeof onUpdateUserProfile === 'function') {
-                      onUpdateUserProfile({ ...userProfile, name: e.target.value });
-                    }
-                  }}
-                  maxLength={24}
-                  title="Your temporary anonymous alias"
-                />
-              </div>
-
-              <button
-                type="button"
-                className="shuffle-alias-btn"
-                onClick={handleReroll}
-                title="Generate new random identity"
-                aria-label="Shuffle random identity"
-              >
-                🎲
-              </button>
+        {/* Centered Neumorphic Card */}
+        <Reveal index={3}>
+          <div className="backrooms-card-container hover-lift">
+            {/* Top Inset Well: Editable Alias */}
+            <div className="backrooms-alias-box hover-lift">
+              <input
+                type="text"
+                className="backrooms-alias-input"
+                placeholder="Enter your alias..."
+                value={displayName}
+                onChange={(e) => {
+                  if (typeof onUpdateUserProfile === 'function') {
+                    onUpdateUserProfile({ ...userProfile, name: e.target.value });
+                  }
+                }}
+                title="Click to customize your alias"
+                maxLength={28}
+              />
+              <span className="backrooms-alias-edit-icon" title="Edit alias">✎</span>
             </div>
 
-            {/* Single Clear Primary Action Button */}
-            <button
-              type="submit"
-              className="primary-enter-btn"
+            {/* Middle Inset Well: Avatar Orbit Carousel */}
+            <div className="backrooms-avatar-stage">
+              {/* Top-right Reroll Shuffle Button */}
+              <motion.button
+                whileHover={{ rotate: 180, scale: 1.15 }}
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+                className="backrooms-shuffle-btn"
+                onClick={handleReroll}
+                title="Shuffle Random Identity"
+              >
+                🔀
+              </motion.button>
+
+              {/* Left Arrow */}
+              <motion.button
+                whileHover={{ scale: 1.18, x: -2 }}
+                whileTap={{ scale: 0.9 }}
+                className="backrooms-nav-arrow"
+                onClick={handlePrevAvatar}
+                title="Previous Avatar"
+              >
+                ‹
+              </motion.button>
+
+              {/* Center Avatar with Golden Glowing Orbit Ring */}
+              <div className="backrooms-avatar-orbit">
+                <div className="backrooms-orbit-ring">
+                  <span className="backrooms-orbit-dot"></span>
+                </div>
+                <motion.div
+                  key={currentAvatar}
+                  initial={{ scale: 0.8, opacity: 0.5 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                  className="backrooms-avatar-emoji"
+                >
+                  {currentAvatar}
+                </motion.div>
+              </div>
+
+              {/* Right Arrow */}
+              <motion.button
+                whileHover={{ scale: 1.18, x: 2 }}
+                whileTap={{ scale: 0.9 }}
+                className="backrooms-nav-arrow"
+                onClick={handleNextAvatar}
+                title="Next Avatar"
+              >
+                ›
+              </motion.button>
+            </div>
+
+            {/* Primary Action Button */}
+            <motion.button
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="backrooms-btn-primary"
+              onClick={handleEnter}
             >
               <span>Enter Lounges</span>
-              <span className="btn-arrow" aria-hidden="true">→</span>
-            </button>
-          </form>
+              <span className="arrow-glyph">→</span>
+            </motion.button>
 
-          {/* Discreet Secondary: Join by Room Code */}
-          <div className="secondary-code-dock">
-            <AnimatePresence mode="wait">
-              {!showCodeInput ? (
-                <button
-                  type="button"
-                  className="code-toggle-link font-mono"
-                  onClick={() => setShowCodeInput(true)}
-                >
-                  Have a room code? Join by #code →
-                </button>
-              ) : (
-                <motion.form
-                  key="room-code-form"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="inline-code-form"
-                  onSubmit={handleJoinCodeSubmit}
-                >
-                  <input
-                    type="text"
-                    className="inline-code-input font-mono"
-                    placeholder="e.g. COFFEE or DOODLE"
-                    value={inputCode}
-                    onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                    maxLength={10}
-                    autoFocus
-                  />
-                  <button type="submit" className="inline-code-submit font-mono">
-                    Join
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-code-cancel"
-                    onClick={() => setShowCodeInput(false)}
-                    aria-label="Cancel code entry"
+            {/* Secondary Action Button */}
+            <motion.button
+              whileHover={{ scale: 1.015, y: -1.5 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="backrooms-btn-secondary"
+              onClick={handleCreate}
+            >
+              <span>+ + Create New Lounge</span>
+            </motion.button>
+
+            {/* Optional Join By Room Code toggle */}
+            <div className="backrooms-code-join-row">
+              <AnimatePresence mode="wait">
+                {!showCodeInput ? (
+                  <motion.button
+                    key="code-link"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="backrooms-code-link"
+                    onClick={() => setShowCodeInput(true)}
                   >
-                    ✕
-                  </button>
-                </motion.form>
-              )}
-            </AnimatePresence>
+                    Have a Room Code? Join directly →
+                  </motion.button>
+                ) : (
+                  <motion.form
+                    key="code-form"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="backrooms-code-form"
+                    onSubmit={handleJoinCodeSubmit}
+                  >
+                    <input
+                      type="text"
+                      className="backrooms-code-input"
+                      placeholder="e.g. COFFEE or DOODLE"
+                      value={inputCode}
+                      onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                      maxLength={10}
+                      autoFocus
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="submit"
+                      className="backrooms-code-btn"
+                    >
+                      Join
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      type="button"
+                      className="backrooms-code-btn-close"
+                      onClick={() => setShowCodeInput(false)}
+                    >
+                      ✕
+                    </motion.button>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </motion.div>
+        </Reveal>
 
-        {/* Quiet Ephemeral Assurance */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="landing-reassurance font-mono"
-        >
-          🔒 In-memory state only • No accounts • No persistent records
-        </motion.p>
+        {/* Bottom Ephemeral Assurance */}
+        <Reveal index={4}>
+          <p className="backrooms-footer-tag">
+            Ephemeral In-Memory • Vanishes when rooms empty • 100% Anonymous
+          </p>
+        </Reveal>
       </main>
 
-      {/* Quiet Minimal Footer */}
-      <footer className="landing-footer font-mono">
-        <span>TheBackrooms</span>
-        <span>•</span>
-        <span>Zero-trace student decompression</span>
+      {/* Subtle Bottom Bar */}
+      <footer className="landing-mini-footer">
+        <span>TheBackrooms • Campus Ephemeral Sanctuary</span>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <span className="hover-lift">🔒 Zero Trace</span>
+          <span className="hover-lift">🎮 5 Multiplayer Games</span>
+          <span className="hover-lift">⚡ Live WebRTC Mesh</span>
+        </div>
       </footer>
     </div>
   );

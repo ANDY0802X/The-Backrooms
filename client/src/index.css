@@ -8,75 +8,52 @@
    ---------------------------------------------------- */
 :root,
 [data-theme='dark'] {
-  /* Spacing Scale (4px Base System) */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
-  --space-16: 64px;
-
-  /* Radius Scale */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
-
-  /* Surfaces: Minimal, Muted & Flat (Linear Style) */
-  --bg-core: #09090b;
-  --bg-surface: #110e10;
-  --bg-surface-elevated: #181417;
-  --bg-glass: rgba(17, 14, 16, 0.82);
-  --bg-well: #0e0b0d;
-  --bg-bubble-other: #161214;
-  --bg-bubble-own: #b00020;
+  /* Surface & Background (Near-black with crimson undertones) */
+  --bg-core: #0a0a0c;
+  --bg-surface: rgba(18, 14, 16, 0.92);
+  --bg-surface-elevated: #171315;
+  --bg-glass: rgba(18, 14, 16, 0.82);
+  --bg-well: #110d0f;
+  --bg-bubble-other: #181416;
+  --bg-bubble-own: linear-gradient(135deg, #b00020 0%, #d32f2f 100%);
   --text-bubble-own: #ffffff;
 
-  /* Borders: Quiet 1px Hairlines */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.16);
-  --border-glass: rgba(255, 255, 255, 0.10);
-  --border-glow: rgba(255, 59, 59, 0.30);
+  /* Red-Tinted Borders & Glassmorphic Glows */
+  --border-subtle: rgba(255, 59, 59, 0.12);
+  --border-glass: rgba(255, 59, 59, 0.18);
+  --border-glow: rgba(255, 59, 59, 0.35);
   --border-focus: #ff3b3b;
 
-  /* Restrained Shadows (Soft Ambient, Non-Harsh) */
-  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 18px 42px rgba(0, 0, 0, 0.65);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.85);
+  /* Atmospheric Shadows with Faint Crimson Bloom */
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.75), 0 0 20px rgba(176, 0, 32, 0.14);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 32px rgba(255, 59, 59, 0.18);
 
-  /* Primary Accent: Strictly Reserved for Primary CTA & Active Signal */
+  /* Primary Accent & Red/Orange Gradients */
   --accent: #b00020;
-  --accent-hover: #cf1432;
-  --accent-glow: rgba(255, 59, 59, 0.35);
-  --accent-gradient: linear-gradient(135deg, #b00020 0%, #e02844 100%);
+  --accent-hover: #ff3b3b;
+  --accent-glow: rgba(255, 59, 59, 0.45);
+  --accent-gradient: linear-gradient(135deg, #b00020 0%, #ff3b3b 100%);
   --accent-burn: linear-gradient(90deg, #ff3b3b 0%, #ff7a00 50%, #b00020 100%);
 
-  /* Utility & Status Accents (Restrained signal use) */
+  /* Game Category & Utility Accents */
   --accent-lavender: #ff4d6d;
   --accent-sage: #10b981;
   --accent-amber: #f59e0b;
   --accent-rose: #ff3b3b;
   --accent-sky: #38bdf8;
 
-  /* Typography: High-Contrast Bone White on Void */
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --doodle-color: rgba(255, 255, 255, 0.04);
+  /* High-Contrast WCAG AA Typography (Bone white body, pure red for accents only) */
+  --text-primary: #f5f5f7;
+  --text-secondary: #b5a9ab;
+  --text-muted: #7d7274;
+  --doodle-color: rgba(255, 59, 59, 0.14);
 
-  /* Ambient Atmospheric Backing */
-  --aura-color-1: rgba(176, 0, 32, 0.12);
-  --aura-color-2: rgba(255, 59, 59, 0.07);
+  /* Ambient Aura Glows */
+  --aura-color-1: rgba(176, 0, 32, 0.22);
+  --aura-color-2: rgba(255, 59, 59, 0.14);
 
-  /* Typography System */
+  /* Three-Tier Typography System */
   --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -84,9 +61,13 @@
   --font-display: var(--font-heading);
   --font-doodle: 'Caveat', cursive;
 
-  /* Physics & Transitions (Snappy & Purposeful: 150-240ms) */
-  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-normal: 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+
+  /* Physics & Transitions */
   --ease-sqs: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-smooth: cubic-bezier(0.25, 1, 0.5, 1);
 }
@@ -96,53 +77,50 @@
    Warm cream backdrop, near-black ink typography, soft off-white panels, muted burgundy accent
    ---------------------------------------------------- */
 [data-theme='light'] {
-  /* Surfaces: Warm Cream & Parchment */
-  --bg-core: #f6f1e8;
-  --bg-surface: #fdfaf4;
+  /* Warm Cream Surfaces */
+  --bg-core: #f5f0e6;
+  --bg-surface: rgba(250, 246, 238, 0.94);
   --bg-surface-elevated: #ffffff;
-  --bg-glass: rgba(253, 250, 244, 0.88);
-  --bg-well: #eae3d6;
-  --bg-bubble-other: #ece5d9;
-  --bg-bubble-own: #18181b;
+  --bg-glass: rgba(250, 246, 238, 0.85);
+  --bg-well: #ebe5d8;
+  --bg-bubble-other: #eae4d6;
+  --bg-bubble-own: linear-gradient(135deg, #1f1b1c 0%, #2e2628 100%);
   --text-bubble-own: #ffffff;
 
-  /* Borders: Thin 1px Neutral Ink Hairlines */
-  --border-subtle: rgba(24, 24, 27, 0.08);
-  --border-hover: rgba(24, 24, 27, 0.16);
-  --border-glass: rgba(24, 24, 27, 0.12);
-  --border-glow: rgba(163, 29, 36, 0.22);
+  /* Black-tinted subtle borders & burgundy glow */
+  --border-subtle: rgba(26, 26, 26, 0.09);
+  --border-glass: rgba(26, 26, 26, 0.14);
+  --border-glow: rgba(163, 29, 36, 0.25);
   --border-focus: #a31d24;
 
   /* Soft Warm Shadows */
-  --shadow-subtle: 0 1px 2px rgba(35, 25, 20, 0.03);
-  --shadow-sm: 0 2px 8px rgba(35, 25, 20, 0.05);
-  --shadow-md: 0 8px 24px rgba(35, 25, 20, 0.08);
-  --shadow-lg: 0 18px 40px rgba(35, 25, 20, 0.12);
-  --shadow-modal: 0 24px 60px rgba(35, 25, 20, 0.18);
+  --shadow-sm: 0 2px 10px rgba(40, 30, 20, 0.04);
+  --shadow-md: 0 10px 30px rgba(40, 30, 20, 0.08), 0 0 15px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 22px 50px rgba(40, 30, 20, 0.12);
 
-  /* Primary Accent: Muted Burgundy, Reserved for Primary CTA & Active */
+  /* Muted Burgundy Accent */
   --accent: #a31d24;
-  --accent-hover: #bd232b;
+  --accent-hover: #b8242b;
   --accent-glow: rgba(163, 29, 36, 0.25);
   --accent-gradient: linear-gradient(135deg, #a31d24 0%, #c42b33 100%);
   --accent-burn: linear-gradient(90deg, #a31d24 0%, #d9534f 50%, #f59e0b 100%);
 
-  /* Utility Accents */
-  --accent-lavender: #a31d24;
+  /* Game Accents */
+  --accent-lavender: #b00020;
   --accent-sage: #059669;
   --accent-amber: #d97706;
   --accent-rose: #dc2626;
   --accent-sky: #0284c7;
 
-  /* High-Contrast Charcoal Ink Typography */
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-muted: #71717a;
-  --doodle-color: rgba(24, 24, 27, 0.03);
+  /* Near-black ink typography (High WCAG AA contrast against cream) */
+  --text-primary: #1a1a1a;
+  --text-secondary: #4d4542;
+  --text-muted: #786e68;
+  --doodle-color: rgba(26, 26, 26, 0.08);
 
   /* Ambient Aura */
-  --aura-color-1: rgba(163, 29, 36, 0.05);
-  --aura-color-2: rgba(217, 83, 79, 0.04);
+  --aura-color-1: rgba(163, 29, 36, 0.08);
+  --aura-color-2: rgba(217, 83, 79, 0.06);
 }
 
 /* Global Reset */
