@@ -22,7 +22,8 @@ export default function Lobby({
   onCreateRoom,
   onBackToLanding,
   theme = 'dark',
-  onToggleTheme
+  onToggleTheme,
+  socket
 }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');

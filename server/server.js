@@ -105,6 +105,7 @@ const rooms = new Map();
 const defaultLounges = [
   {
     id: 'lounge-midnight-coffee',
+    code: 'COFFEE',
     name: 'Midnight Espresso ☕',
     category: 'Study',
     selectedGame: 'scribble',
@@ -115,6 +116,7 @@ const defaultLounges = [
   },
   {
     id: 'lounge-scribble-arena',
+    code: 'DOODLE',
     name: 'Campus Scribble Arena 🎨',
     category: 'Mini-Game',
     selectedGame: 'scribble',
@@ -125,6 +127,7 @@ const defaultLounges = [
   },
   {
     id: 'lounge-trivia-blitz',
+    code: 'TRIVIA',
     name: 'Campus Trivia Blitz ⚡',
     category: 'Mini-Game',
     selectedGame: 'trivia',
@@ -135,6 +138,7 @@ const defaultLounges = [
   },
   {
     id: 'lounge-word-chain',
+    code: 'CHAINS',
     name: 'Rapid Word Chain 🔗',
     category: 'Mini-Game',
     selectedGame: 'wordchain',
@@ -145,6 +149,7 @@ const defaultLounges = [
   },
   {
     id: 'lounge-emoji-pop',
+    code: 'ARCADE',
     name: 'Emoji Pop Reflex 💥',
     category: 'Mini-Game',
     selectedGame: 'emojipop',
@@ -155,6 +160,7 @@ const defaultLounges = [
   },
   {
     id: 'lounge-truth-vent',
+    code: 'CONFES',
     name: 'Truth, Vent & Dare 🎭',
     category: 'Rant',
     selectedGame: 'truthvent',
@@ -207,6 +213,7 @@ defaultLounges.forEach(lounge => {
 function formatRoomForLobby(room) {
   return {
     id: room.id,
+    code: room.code || (room.id.startsWith('lounge-') ? room.id.replace('lounge-', '').slice(0, 6).toUpperCase() : room.id.slice(0, 6).toUpperCase()),
     name: room.name,
     category: room.category,
     selectedGame: room.game?.type || room.selectedGame || 'scribble',
@@ -653,9 +660,11 @@ io.on('connection', (socket) => {
   socket.on('create_room', (roomData, callback) => {
     const roomId = `lounge-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const selectedGame = roomData.selectedGame || 'scribble';
+    const roomCode = (roomData.code || roomId.replace('lounge-', '').slice(0, 6)).toUpperCase();
 
     const newRoom = {
       id: roomId,
+      code: roomCode,
       name: roomData.name || 'Cozy Anonymous Corner ☕',
       category: roomData.category || 'General',
       selectedGame,
@@ -691,7 +700,66 @@ io.on('connection', (socket) => {
     io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
 
     if (typeof callback === 'function') {
-      callback({ success: true, roomId });
+      callback({ success: true, roomId, code: roomCode });
+    }
+  });
+
+  // Join Room by Code
+  socket.on('join_room_by_code', (data, callback) => {
+    const rawCode = (typeof data === 'string' ? data : (data?.code || '')).trim().replace(/^#/, '').toUpperCase();
+    if (!rawCode) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Invalid room code' });
+      return;
+    }
+
+    let targetRoom = Array.from(rooms.values()).find(r => 
+      (r.code && r.code.toUpperCase() === rawCode) ||
+      r.id.toUpperCase() === rawCode ||
+      r.id.toUpperCase() === `LOUNGE-${rawCode}`
+    );
+
+    if (!targetRoom) {
+      // Create ephemeral room for custom code so multiple peers enter the same room
+      const newRoomId = `lounge-${rawCode.toLowerCase()}`;
+      targetRoom = {
+        id: newRoomId,
+        code: rawCode,
+        name: `Private Lounge #${rawCode}`,
+        category: 'General',
+        selectedGame: 'scribble',
+        description: `Private room joined with code #${rawCode}`,
+        tags: ['Private', 'Code-Room'],
+        created: Date.now(),
+        isPermanent: false,
+        users: new Map(),
+        canvasStrokes: [],
+        messages: [],
+        game: {
+          type: 'scribble',
+          isActive: false,
+          scores: {},
+          timerInterval: null,
+          timeLeft: 30,
+          currentDrawer: null,
+          currentWord: '',
+          revealedWord: '',
+          hasGuessed: new Set(),
+          triviaQuestion: null,
+          triviaAnswers: new Map(),
+          currentLetter: 'C',
+          lastWord: 'Campus',
+          wordHistory: ['Campus'],
+          streakCount: 1,
+          currentPrompt: null,
+          emojiTargets: []
+        }
+      };
+      rooms.set(newRoomId, targetRoom);
+      io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+    }
+
+    if (typeof callback === 'function') {
+      callback({ success: true, roomId: targetRoom.id });
     }
   });
 
@@ -729,6 +797,7 @@ io.on('connection', (socket) => {
     socket.emit('room_joined_data', {
       room: {
         id: room.id,
+        code: room.code || (room.id.startsWith('lounge-') ? room.id.replace('lounge-', '').slice(0, 6).toUpperCase() : room.id.slice(0, 6).toUpperCase()),
         name: room.name,
         category: room.category,
         selectedGame: room.game.type,
