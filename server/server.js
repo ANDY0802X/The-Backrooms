@@ -2,6 +2,12 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const allowedOrigins = [
   'https://ycrxi75f.insforge.site',
@@ -22,6 +28,14 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+app.get(['/health', '/api/health'], (req, res) => {
+  res.json({
+    status: 'ok',
+    activeRooms: rooms ? rooms.size : 0,
+    timestamp: Date.now()
+  });
+});
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -1546,6 +1560,25 @@ io.on('connection', (socket) => {
 
   socket.on('leave_room', handleLeave);
   socket.on('disconnect', handleLeave);
+});
+
+const clientDist = path.join(__dirname, '../client/dist');
+const indexHtml = path.join(clientDist, 'index.html');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+}
+
+app.get('*', (req, res) => {
+  if (fs.existsSync(indexHtml)) {
+    res.sendFile(indexHtml);
+  } else {
+    res.json({
+      status: 'live',
+      service: 'TheBackrooms Socket.io Backend',
+      socketEndpoint: '/socket.io/',
+      activeRooms: rooms.size
+    });
+  }
 });
 
 httpServer.listen(PORT, () => {
