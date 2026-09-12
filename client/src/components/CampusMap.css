@@ -1,0 +1,624 @@
+/* ==========================================================================
+   CampusMap.css — Dual-Theme Support: Blood Void (Dark) & Cream Noir (Light)
+   ========================================================================== */
+
+.campus-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 620px;
+  min-height: 520px;
+  border-radius: var(--radius-lg, 24px);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-core);
+  transition: all 0.28s var(--ease-sqs, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (max-width: 768px) {
+  .campus-map-wrapper {
+    height: 500px;
+    border-radius: var(--radius-md, 16px);
+  }
+}
+
+.campus-leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-core) !important;
+  font-family: var(--font-main, 'Sora', sans-serif);
+  z-index: 1;
+}
+
+/* Map dragging & pan cursors */
+.leaflet-container {
+  cursor: grab !important;
+}
+
+.leaflet-container.leaflet-dragging,
+.leaflet-container:active {
+  cursor: grabbing !important;
+}
+
+.leaflet-marker-icon,
+.custom-map-pin,
+.cluster-marker-wrap {
+  cursor: pointer !important;
+}
+
+/* Subdued tile styling */
+.campus-map-wrapper[data-theme='dark'] .leaflet-tile {
+  filter: brightness(0.85) contrast(1.08);
+}
+
+.campus-map-wrapper[data-theme='light'] .leaflet-tile {
+  filter: contrast(1.02);
+}
+
+/* Hide default leaflet controls */
+.leaflet-control-zoom {
+  display: none !important;
+}
+
+.leaflet-control-attribution {
+  background: var(--bg-surface) !important;
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-sm, 8px) 0 0 0;
+  padding: 3px 8px !important;
+  border-top: 1px solid var(--border-subtle);
+  border-left: 1px solid var(--border-subtle);
+}
+
+.leaflet-control-attribution a {
+  color: var(--text-secondary) !important;
+  text-decoration: none;
+}
+
+.leaflet-control-attribution a:hover {
+  color: var(--accent) !important;
+}
+
+/* ===================================================
+   TOP FILTER STRIP (Matches .category-filter-bar in Lobby)
+   =================================================== */
+
+.map-overlay-topbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.map-filter-chips {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  padding: 4px 6px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  pointer-events: auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.map-filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.map-chip-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: var(--font-main, sans-serif);
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s var(--ease-sqs, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.map-chip-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-well);
+}
+
+/* Dark Theme Chip Active (Blood Void Red) */
+.campus-map-wrapper[data-theme='dark'] .map-chip-btn.active {
+  background: var(--accent-gradient, linear-gradient(135deg, #b00020 0%, #ff3b3b 100%));
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 12px var(--accent-glow, rgba(255, 59, 59, 0.45));
+}
+
+/* Light Theme Chip Active (Crisp Black) */
+.campus-map-wrapper[data-theme='light'] .map-chip-btn.active {
+  background: #18181b;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.map-chip-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* ===================================================
+   FLOATING HUD CONTROLS
+   =================================================== */
+
+.map-floating-hud {
+  position: absolute;
+  bottom: 24px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+
+.map-hud-group {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.map-hud-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.22s var(--ease-sqs, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.map-hud-group .map-hud-btn {
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.map-hud-group .map-hud-btn:last-child {
+  border-bottom: none;
+}
+
+.map-hud-btn:hover {
+  background: var(--bg-surface-elevated);
+  transform: translateY(-2px) scale(1.06);
+  border-color: var(--border-glow);
+  box-shadow: var(--shadow-md);
+}
+
+.map-hud-btn:active {
+  transform: scale(0.95);
+}
+
+/* Place Pin Mode Banner */
+.map-placing-banner {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-sage, #10b981);
+  color: #042f2e;
+  padding: 8px 20px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-family: var(--font-main, sans-serif);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1001;
+  pointer-events: auto;
+  animation: placeBannerPulse 2.4s infinite ease-in-out;
+}
+
+@keyframes placeBannerPulse {
+  0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35); }
+  50% { transform: translateX(-50%) scale(1.02); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5); }
+}
+
+.map-placing-cancel-btn {
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
+  color: #042f2e;
+  border-radius: var(--radius-full, 9999px);
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 800;
+  transition: background 0.18s;
+}
+
+.map-placing-cancel-btn:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.campus-map-wrapper.placing-mode .leaflet-container {
+  cursor: crosshair !important;
+}
+
+/* ===================================================
+   PIN MARKERS: BLOOD VOID (RED) & CREAM NOIR (BLACK)
+   =================================================== */
+
+.custom-map-pin {
+  background: transparent;
+  border: none;
+  cursor: pointer !important;
+  transition: transform 0.22s var(--ease-sqs, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.pin-marker-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  padding: 5px 12px 5px 6px;
+  border-radius: var(--radius-full, 9999px);
+  backdrop-filter: blur(16px);
+  cursor: pointer !important;
+  transition: all 0.22s var(--ease-sqs, cubic-bezier(0.16, 1, 0.3, 1));
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+}
+
+/* Pointer pip at bottom center of the pill */
+.pin-marker-pill::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--bg-surface-elevated);
+  transition: border-top-color 0.22s;
+}
+
+/* Hover state: scale + soft glow */
+.custom-map-pin:hover .pin-marker-pill {
+  transform: translate(-50%, -100%) scale(1.08) translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Pin Avatar circle */
+.pin-icon-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.pin-label-title {
+  font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 1. DARK THEME SOCIAL ROOM PIN (Blood Void Crimson Red) */
+.pin-dark-room .pin-icon-avatar {
+  background: rgba(255, 59, 59, 0.2);
+  color: #ff3b3b;
+  border: 1px solid rgba(255, 59, 59, 0.45);
+}
+
+.pin-dark-room .pin-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff3b3b;
+  box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.7);
+  animation: pulsePingRed 2s infinite cubic-bezier(0.66, 0, 0, 1);
+  flex-shrink: 0;
+}
+
+.custom-map-pin:hover .pin-dark-room {
+  border-color: #ff3b3b;
+  box-shadow: 0 8px 24px rgba(255, 59, 59, 0.45);
+}
+
+.custom-map-pin:hover .pin-dark-room::after {
+  border-top-color: #ff3b3b;
+}
+
+@keyframes pulsePingRed {
+  0% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(255, 59, 59, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0); }
+}
+
+/* 2. LIGHT THEME SOCIAL ROOM PIN (Crisp Black Pill) */
+.pin-light-room {
+  background: linear-gradient(135deg, #18181b 0%, #27272a 100%) !important;
+  border-color: #18181b !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+.pin-light-room .pin-label-title {
+  color: #ffffff !important;
+}
+
+.pin-light-room .pin-icon-avatar {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.pin-light-room .pin-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulsePing 2s infinite cubic-bezier(0.66, 0, 0, 1);
+  flex-shrink: 0;
+}
+
+.pin-light-room::after {
+  border-top-color: #18181b !important;
+}
+
+.custom-map-pin:hover .pin-light-room {
+  transform: translate(-50%, -100%) scale(1.08) translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* 3. Marketplace Pin (🏷️) */
+.pin-type-marketplace .pin-icon-avatar {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-sage, #10b981);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.pin-price-chip-tag {
+  font-family: var(--font-heading, monospace);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--accent-sage, #10b981);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 1px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.custom-map-pin:hover .pin-type-marketplace {
+  border-color: var(--accent-sage, #10b981);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+}
+.custom-map-pin:hover .pin-type-marketplace::after {
+  border-top-color: var(--accent-sage, #10b981);
+}
+
+/* 4. Lost & Found Pin (📝) */
+.pin-type-lostfound .pin-icon-avatar {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-amber, #f59e0b);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.pin-lf-status-chip {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--accent-amber, #f59e0b);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 1px 5px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+.custom-map-pin:hover .pin-type-lostfound {
+  border-color: var(--accent-amber, #f59e0b);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+}
+.custom-map-pin:hover .pin-type-lostfound::after {
+  border-top-color: var(--accent-amber, #f59e0b);
+}
+
+/* ===================================================
+   CLUSTER MARKERS
+   =================================================== */
+
+.custom-cluster-badge {
+  border-radius: 50%;
+  font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(16px);
+  transition: all 0.22s var(--ease-sqs, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* Dark Theme: Blood Void Red Cluster */
+.custom-cluster-badge.cluster-dark {
+  background: rgba(18, 14, 16, 0.92);
+  border: 2px solid #ff3b3b;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 59, 59, 0.45);
+}
+
+.custom-cluster-badge.cluster-dark:hover {
+  transform: scale(1.14) translateY(-2px);
+  box-shadow: 0 0 24px rgba(255, 59, 59, 0.7);
+}
+
+/* Light Theme: Crisp Black Cluster */
+.custom-cluster-badge.cluster-light {
+  background: rgba(250, 246, 238, 0.95);
+  border: 2px solid #18181b;
+  color: #18181b;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.custom-cluster-badge.cluster-light:hover {
+  transform: scale(1.14) translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* ===================================================
+   LEAFLET POPUP CARDS
+   =================================================== */
+
+.leaflet-popup-content-wrapper {
+  background: var(--bg-surface) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-md, 16px) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+.pin-popup-card {
+  padding: 16px 18px 14px 18px;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pin-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pin-popup-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.pin-popup-title {
+  margin: 0;
+  font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.pin-popup-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.pin-popup-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.pin-popup-price-tag {
+  font-family: var(--font-heading, monospace);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--accent-sage, #10b981);
+}
+
+.pin-popup-lf-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--accent-amber, #f59e0b);
+  letter-spacing: 0.04em;
+}
+
+.pin-popup-img-thumb {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
+/* Tooltip on Vector Features */
+.geojson-feature-tooltip {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 6px !important;
+  font-family: var(--font-main, sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.geojson-feature-tooltip::before {
+  display: none !important;
+}

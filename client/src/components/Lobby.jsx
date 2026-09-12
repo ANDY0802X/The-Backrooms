@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Lobby.css';
 import { sounds } from '../utils/sound';
 import Reveal from './Reveal';
+import CampusMap from './CampusMap';
+import LostFoundModal from './LostFoundModal';
+import TradeModal from './TradeModal';
 
 const CATEGORIES = ['All', 'General', 'Study', 'Rant', 'Art', 'Mini-Game'];
 
@@ -16,30 +19,63 @@ const GAME_OPTIONS = [
 
 export default function Lobby({
   rooms = [],
+  pins = [],
   userProfile,
   onUpdateUserProfile,
   onRerollProfile,
   onJoinRoom,
   onJoinRoomByCode,
   onCreateRoom,
+  onCreatePin,
+  onUpdatePin,
+  onAddLostFoundComment,
+  onAddTradeComment,
   onBackToLanding,
   theme = 'dark',
   onToggleTheme,
-  socket
+  coords
 }) {
+  const [viewMode, setViewMode] = useState('map'); // 'map' | 'list'
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
 
-  // New room modal state
+  // Pin placement & creation state
+  const [isPlacingPin, setIsPlacingPin] = useState(false);
+  const [pinCoords, setPinCoords] = useState({ lat: coords?.lat || 28.545000, lng: coords?.lon || 77.192600 });
+  const [activePinTab, setActivePinTab] = useState('room'); // 'room' | 'marketplace' | 'lostfound'
+  const [activeLostFoundPinId, setActiveLostFoundPinId] = useState(null);
+  const [activeTradePinId, setActiveTradePinId] = useState(null);
+
+  // Reactively derive active pins from pins prop to ensure instant live comment updates
+  const currentLostFoundPin = useMemo(() => {
+    return pins.find(p => p.id === activeLostFoundPinId) || null;
+  }, [pins, activeLostFoundPinId]);
+
+  const currentTradePin = useMemo(() => {
+    return pins.find(p => p.id === activeTradePinId) || null;
+  }, [pins, activeTradePinId]);
+
+  // New room/pin modal state
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomCode, setNewRoomCode] = useState('');
   const [newRoomCategory, setNewRoomCategory] = useState('General');
   const [newRoomGame, setNewRoomGame] = useState('scribble');
   const [newRoomDesc, setNewRoomDesc] = useState('');
   const [newRoomTags, setNewRoomTags] = useState('');
+
+  // Marketplace fields
+  const [mktPrice, setMktPrice] = useState('$15');
+  const [mktType, setMktType] = useState('sell'); // 'sell' | 'rent' | 'trade'
+  const [mktCondition, setMktCondition] = useState('Like New');
+  const [mktPhotoUrl, setMktPhotoUrl] = useState('');
+
+  // Lost & Found fields
+  const [lfCategory, setLfCategory] = useState('lost'); // 'lost' | 'found'
+  const [lfDateLoc, setLfDateLoc] = useState('');
+  const [lfPhotoUrl, setLfPhotoUrl] = useState('');
 
   const filteredRooms = rooms.filter(room => {
     const matchesCat = selectedCategory === 'All' || room.category === selectedCategory;
@@ -56,14 +92,69 @@ export default function Lobby({
     if (!newRoomName.trim()) return;
 
     sounds.playSuccess();
-    onCreateRoom({
-      name: newRoomName.trim(),
-      code: newRoomCode.trim().toUpperCase() || undefined,
-      category: newRoomCategory,
-      selectedGame: newRoomGame,
-      description: newRoomDesc.trim() || 'A chill space to decompress.',
-      tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean)
-    });
+
+    if (activePinTab === 'room') {
+      const roomPayload = {
+        name: newRoomName.trim(),
+        code: newRoomCode.trim().toUpperCase() || undefined,
+        category: newRoomCategory,
+        selectedGame: newRoomGame,
+        description: newRoomDesc.trim() || 'A chill space to decompress.',
+        tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean)
+      };
+
+      if (typeof onCreateRoom === 'function') {
+        onCreateRoom(roomPayload);
+      }
+
+      if (typeof onCreatePin === 'function') {
+        onCreatePin({
+          title: newRoomName.trim(),
+          type: 'room',
+          lat: pinCoords.lat,
+          lng: pinCoords.lng,
+          description: newRoomDesc.trim() || 'Live student lounge on campus.',
+          category: newRoomCategory,
+          user: userProfile
+        });
+      }
+    } else if (activePinTab === 'marketplace') {
+      if (typeof onCreatePin === 'function') {
+        onCreatePin({
+          title: newRoomName.trim(),
+          type: 'marketplace',
+          lat: pinCoords.lat,
+          lng: pinCoords.lng,
+          description: newRoomDesc.trim(),
+          category: 'Marketplace',
+          user: userProfile,
+          marketData: {
+            price: mktPrice.trim() || '$0',
+            listingType: mktType,
+            condition: mktCondition,
+            photoUrl: mktPhotoUrl.trim()
+          }
+        });
+      }
+    } else if (activePinTab === 'lostfound') {
+      if (typeof onCreatePin === 'function') {
+        onCreatePin({
+          title: newRoomName.trim(),
+          type: 'lostfound',
+          lat: pinCoords.lat,
+          lng: pinCoords.lng,
+          description: newRoomDesc.trim(),
+          category: 'LostFound',
+          user: userProfile,
+          lostFoundData: {
+            category: lfCategory,
+            dateLocation: lfDateLoc.trim() || 'Campus area',
+            photoUrl: lfPhotoUrl.trim(),
+            description: newRoomDesc.trim()
+          }
+        });
+      }
+    }
 
     setIsModalOpen(false);
     setNewRoomName('');
@@ -101,77 +192,12 @@ export default function Lobby({
     }
   };
 
-  const getRoomIcon = (gameType, category) => {
-    // Chat bubble — vent/general/rant rooms
-    if (category === 'Rant' || gameType === 'truthvent') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 8h36a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H16l-8 8V10a2 2 0 0 1 2-2z" />
-          <line x1="14" y1="18" x2="34" y2="18" />
-          <line x1="14" y1="26" x2="26" y2="26" />
-        </svg>
-      );
-    }
-    // Brush — art/doodle/scribble rooms
-    if (category === 'Art' || gameType === 'scribble') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M36 6l6 6-24 24-8 2 2-8L36 6z" />
-          <path d="M30 12l6 6" />
-          <path d="M6 40c4-2 8-1 10 2" strokeDasharray="3 2" />
-        </svg>
-      );
-    }
-    // Question mark — trivia rooms
-    if (gameType === 'trivia') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="24" cy="24" r="18" />
-          <path d="M18 19c0-3.3 2.7-6 6-6s6 2.7 6 6c0 4-6 5-6 10" />
-          <circle cx="24" cy="37" r="1.5" fill="currentColor" />
-        </svg>
-      );
-    }
-    // Chain link — word chain rooms
-    if (gameType === 'wordchain') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 30l-4 4a6 6 0 0 1-8.5-8.5l8-8A6 6 0 0 1 22 20" />
-          <path d="M30 18l4-4a6 6 0 0 1 8.5 8.5l-8 8A6 6 0 0 1 26 28" />
-        </svg>
-      );
-    }
-    // Controller — emojipop / arcade / mini-game rooms
-    if (gameType === 'emojipop' || category === 'Mini-Game') {
-      return (
-        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="6" y="16" width="36" height="22" rx="8" />
-          <line x1="16" y1="22" x2="16" y2="32" />
-          <line x1="11" y1="27" x2="21" y2="27" />
-          <circle cx="32" cy="22" r="2" fill="currentColor" />
-          <circle cx="38" cy="27" r="2" fill="currentColor" />
-          <circle cx="32" cy="32" r="2" fill="currentColor" />
-          <circle cx="26" cy="27" r="2" fill="currentColor" />
-        </svg>
-      );
-    }
-    // Default — couch/sofa for general/study
-    return (
-      <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 28V20a4 4 0 0 1 8 0v4h20v-4a4 4 0 0 1 8 0v8" />
-        <rect x="4" y="28" width="40" height="8" rx="3" />
-        <line x1="12" y1="36" x2="12" y2="42" />
-        <line x1="36" y1="36" x2="36" y2="42" />
-      </svg>
-    );
-  };
-
   return (
     <div className="lobby-container">
       {/* Header */}
       <header className="lobby-header-bar">
         <div className="lobby-brand hover-lift" onClick={onBackToLanding} title="Back to home">
-          <div className="brand-icon-box" style={{ width: '32px', height: '32px', fontSize: '1rem' }}>🌌</div>
+          <div className="brand-icon-box" style={{ width: '32px', height: '32px', fontSize: '1rem' }}>🪐</div>
           <h2 className="brand-title">TheBackrooms</h2>
         </div>
 
@@ -261,185 +287,205 @@ export default function Lobby({
               whileTap={{ scale: 0.96 }}
               type="submit"
               className="btn-pill-primary"
-              style={{ padding: '8px 20px' }}
+              style={{ padding: '8px 22px', fontSize: '0.85rem' }}
             >
-              <span>Join Room</span>
-              <span>➔</span>
+              Join Room →
             </motion.button>
           </form>
         </section>
       </Reveal>
 
-      {/* Controls Bar */}
-      <section className="lobby-controls-section">
-        <div className="controls-top-row">
-          <div className="search-box-wrapper hover-lift">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search lounges by name, code, topic or tag..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      {/* Controls & Filter Section */}
+      <Reveal index={2}>
+        <section className="lobby-controls-section">
+          <div className="controls-top-row">
+            <div className="search-box-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search lounges by name, tag, code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Segmented View Mode Toggle: Campus Map vs. Room List */}
+            <div className="view-mode-toggle">
+              <button
+                type="button"
+                className={`view-mode-btn ${viewMode === 'map' ? 'active' : ''}`}
+                onClick={() => {
+                  sounds.playPop();
+                  setViewMode('map');
+                }}
+              >
+                🗺️ Campus Map
+              </button>
+              <button
+                type="button"
+                className={`view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => {
+                  sounds.playPop();
+                  setViewMode('list');
+                }}
+              >
+                📋 Room List
+              </button>
+            </div>
+
             <motion.button
               whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-pill-secondary"
-              onClick={() => {
-                if (rooms.length > 0) {
-                  const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
-                  sounds.playChime();
-                  onJoinRoom(randomRoom.id);
-                }
-              }}
-            >
-              ⚡ Quick Match
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.96 }}
               className="btn-pill-primary"
               onClick={() => {
                 sounds.playPop();
                 setIsModalOpen(true);
               }}
             >
-              ➕ Create Lounge
+              {viewMode === 'map' ? '📍 Create Campus Pin' : '+ Create Lounge'}
             </motion.button>
           </div>
-        </div>
 
-        {/* Category Filter Tabs */}
-        <div className="category-filter-bar">
-          {CATEGORIES.map(cat => (
-            <motion.button
-              key={cat}
-              whileHover={{ scale: 1.04, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className={`filter-tab-pill ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedCategory(cat);
-                sounds.playPop();
-              }}
-            >
-              {cat === 'All' && '🌐'}
-              {cat === 'General' && '🛋️'}
-              {cat === 'Study' && '📚'}
-              {cat === 'Rant' && '📢'}
-              {cat === 'Art' && '🎨'}
-              {cat === 'Mini-Game' && '🎮'}
-              <span>{cat}</span>
-              <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>
-                ({cat === 'All' ? rooms.length : rooms.filter(r => r.category === cat).length})
-              </span>
-            </motion.button>
-          ))}
-        </div>
-      </section>
+          {viewMode === 'list' && (
+            <div className="category-filter-bar">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  className={`filter-tab-pill ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => {
+                    sounds.playPop();
+                    setSelectedCategory(cat);
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      </Reveal>
 
-      {/* Room Cards Grid with Staggered Reveals */}
-      <main className="room-grid">
-        {filteredRooms.map((room, index) => {
-          const roomCode = room.code || room.id.replace('lounge-', '').slice(0, 6).toUpperCase();
-          return (
-            <Reveal key={room.id} index={index}>
-              <motion.div
-                whileHover={{ y: -4, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
-                className="glass-panel-interactive room-card hover-lift"
-                style={{ '--activity-level': Math.min((room.userCount || 1) / 6, 1) }}
+      {/* BODY VIEW: Interactive Campus Map OR Room Grid */}
+      {viewMode === 'map' ? (
+        <div className="lobby-map-section">
+          <CampusMap
+            pins={pins}
+            userProfile={userProfile}
+            theme={theme}
+            onOpenRoom={(roomId) => {
+              if (roomId) onJoinRoom(roomId);
+            }}
+            onOpenMarketplace={(pin) => {
+              setActiveTradePinId(pin?.id || pin);
+            }}
+            onOpenLostFound={(pin) => {
+              setActiveLostFoundPinId(pin?.id || pin);
+            }}
+            isPlacingPin={isPlacingPin}
+            onCancelPlacingPin={() => setIsPlacingPin(false)}
+            onMapClickToPlace={(clickedCoords) => {
+              setPinCoords(clickedCoords);
+              setIsPlacingPin(false);
+              setIsModalOpen(true);
+            }}
+          />
+        </div>
+      ) : (
+        <main className="room-grid">
+          {filteredRooms.map((room, idx) => {
+            const userCount = room.userCount !== undefined ? room.userCount : 1;
+            const roomCode = room.code || room.id?.slice(0, 6)?.toUpperCase() || 'LOBBY';
+
+            return (
+              <Reveal key={room.id} index={idx}>
+                <motion.div
+                  className="room-card glass-panel-interactive hover-lift"
+                  whileHover={{ y: -4 }}
+                  onClick={() => {
+                    sounds.playChime();
+                    onJoinRoom(room.id);
+                  }}
+                >
+                  <div className="room-card-top">
+                    <span className="room-card-game-badge">
+                      {getGameLabel(room.selectedGame)}
+                    </span>
+                    <div className="room-user-badge">
+                      <span className="pulsing-ping-dot"></span>
+                      <span>{userCount} online</span>
+                    </div>
+                  </div>
+
+                  <div className="room-code-badge-row">
+                    <span className="room-code-display">Code: #{roomCode}</span>
+                    <motion.button
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.92 }}
+                      type="button"
+                      className="room-code-copy-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyCode(roomCode);
+                      }}
+                      title="Copy room code"
+                    >
+                      {copiedCode === roomCode ? '✓ Copied' : '📋 Copy'}
+                    </motion.button>
+                  </div>
+
+                  <div>
+                    <h3 className="room-card-title">{room.name}</h3>
+                    <p className="room-card-desc">{room.description}</p>
+                  </div>
+
+                  {room.tags && room.tags.length > 0 && (
+                    <div className="room-tag-pills">
+                      {room.tags.map((tag, i) => (
+                        <span key={i} className="room-tag hover-lift">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="room-card-footer">
+                    <motion.button
+                      whileHover={{ scale: 1.02, y: -1.5 }}
+                      whileTap={{ scale: 0.96 }}
+                      className="btn-pill-primary"
+                      style={{ width: '100%', justifyContent: 'center', padding: '10px' }}
+                      onClick={() => {
+                        sounds.playChime();
+                        onJoinRoom(room.id);
+                      }}
+                    >
+                      <span>Step Inside</span>
+                      <span>➔</span>
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </Reveal>
+            );
+          })}
+
+          {filteredRooms.length === 0 && (
+            <div className="glass-panel" style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center' }}>
+              <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                {searchQuery ? `No lounges match "${searchQuery}".` : 'No active lounges right now. Create the first one!'}
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                className="btn-pill-primary"
+                onClick={() => setIsModalOpen(true)}
               >
-                {/* Room Type Icon */}
-                <div className="room-card-icon-area">
-                  {getRoomIcon(room.selectedGame, room.category)}
-                </div>
+                + Create Lounge ✨
+              </motion.button>
+            </div>
+          )}
+        </main>
+      )}
 
-                <div className="room-card-top">
-                  <span className="room-card-game-badge hover-lift">
-                    {getGameLabel(room.selectedGame)}
-                  </span>
-                  <div className="room-user-badge hover-lift" title="Live active presence ping">
-                    <span className="pulsing-ping-dot"></span>
-                    <span>{room.userCount || 1} online</span>
-                  </div>
-                </div>
-
-                {/* Room Code Badge */}
-                <div className="room-code-tag-row">
-                  <span className="room-code-display">Code: #{roomCode}</span>
-                  <motion.button
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
-                    type="button"
-                    className="room-code-copy-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCopyCode(roomCode);
-                    }}
-                    title="Copy room code"
-                  >
-                    {copiedCode === roomCode ? '✓ Copied' : '📋 Copy'}
-                  </motion.button>
-                </div>
-
-                <div>
-                  <h3 className="room-card-title">{room.name}</h3>
-                  <p className="room-card-desc">{room.description}</p>
-                </div>
-
-                {room.tags && room.tags.length > 0 && (
-                  <div className="room-tag-pills">
-                    {room.tags.map((tag, i) => (
-                      <span key={i} className="room-tag hover-lift">#{tag}</span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="room-card-footer">
-                  <motion.button
-                    whileHover={{ scale: 1.02, y: -1.5 }}
-                    whileTap={{ scale: 0.96 }}
-                    className="btn-pill-primary"
-                    style={{ width: '100%', justifyContent: 'center', padding: '10px' }}
-                    onClick={() => {
-                      sounds.playChime();
-                      onJoinRoom(room.id);
-                    }}
-                  >
-                    <span>Step Inside</span>
-                    <span>➔</span>
-                  </motion.button>
-                </div>
-              </motion.div>
-            </Reveal>
-          );
-        })}
-
-        {filteredRooms.length === 0 && (
-          <div className="glass-panel" style={{ gridColumn: '1 / -1', padding: '48px 24px', textAlign: 'center' }}>
-            <span style={{ fontSize: '2.4rem', display: 'block', marginBottom: '12px' }}>🌌</span>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '8px' }}>
-              {searchQuery ? `No lounges match "${searchQuery}"` : 'No active lounges right now'}
-            </h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              {searchQuery ? 'Try searching another topic or create this room!' : 'Create a lounge and invite peers or let nearby students discover it!'}
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
-              className="btn-pill-primary"
-              onClick={() => setIsModalOpen(true)}
-            >
-              + Create Lounge ✨
-            </motion.button>
-          </div>
-        )}
-      </main>
-
-      {/* Create Modal with Framer-Motion Entrance & Exit */}
+      {/* Create Modal with Tabs for Room, Marketplace, Lost & Found */}
       <AnimatePresence>
         {isModalOpen && (
           <motion.div
@@ -459,7 +505,9 @@ export default function Lobby({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="modal-header">
-                <h3 className="modal-title">Create a Lounge</h3>
+                <h3 className="modal-title">
+                  {viewMode === 'map' ? 'Create Campus Location Pin' : 'Create a Lounge'}
+                </h3>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -470,88 +518,255 @@ export default function Lobby({
                 </motion.button>
               </div>
 
-              <form onSubmit={handleCreateSubmit} className="modal-form-flex">
-                <div className="modal-form-scroll">
-                  <div className="modal-form-group">
-                    <label className="modal-label">Lounge Name *</label>
-                    <input
-                      type="text"
-                      className="modal-input"
-                      placeholder="e.g. 3AM Chill Corner, Late Night Cram"
-                      value={newRoomName}
-                      onChange={(e) => setNewRoomName(e.target.value)}
-                      required
-                      autoFocus
-                    />
-                  </div>
+              {/* Pin Type Tabs */}
+              <div className="pin-type-tabs">
+                <button
+                  type="button"
+                  className={`pin-type-tab ${activePinTab === 'room' ? 'active' : ''}`}
+                  onClick={() => setActivePinTab('room')}
+                >
+                  🗣️ Social Lounge
+                </button>
+                <button
+                  type="button"
+                  className={`pin-type-tab ${activePinTab === 'marketplace' ? 'active' : ''}`}
+                  onClick={() => setActivePinTab('marketplace')}
+                >
+                  🏷️ Campus Market
+                </button>
+                <button
+                  type="button"
+                  className={`pin-type-tab ${activePinTab === 'lostfound' ? 'active' : ''}`}
+                  onClick={() => setActivePinTab('lostfound')}
+                >
+                  📝 Lost & Found
+                </button>
+              </div>
 
-                  <div className="modal-form-group">
-                    <label className="modal-label">Custom Room Code (Optional)</label>
-                    <input
-                      type="text"
-                      className="modal-input"
-                      placeholder="e.g. COZY42 (or leave blank to auto-generate)"
-                      value={newRoomCode}
-                      onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
-                      maxLength={10}
-                    />
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Friends can enter this code from the home page to join your room immediately.
-                    </span>
-                  </div>
-
-                  <div className="modal-grid-2">
-                    <div className="modal-form-group">
-                      <label className="modal-label">Category</label>
-                      <select
-                        className="modal-input"
-                        value={newRoomCategory}
-                        onChange={(e) => setNewRoomCategory(e.target.value)}
-                      >
-                        <option value="General">🛋️ General Chill</option>
-                        <option value="Study">📚 Study / Focus</option>
-                        <option value="Rant">📢 Anonymous Vent</option>
-                        <option value="Art">🎨 Art / Canvas</option>
-                        <option value="Mini-Game">🎮 Multiplayer Games</option>
-                      </select>
-                    </div>
-
-                    <div className="modal-form-group">
-                      <label className="modal-label">Multiplayer Mini-Game</label>
-                      <select
-                        className="modal-input"
-                        value={newRoomGame}
-                        onChange={(e) => setNewRoomGame(e.target.value)}
-                      >
-                        {GAME_OPTIONS.map(g => (
-                          <option key={g.id} value={g.id}>{g.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="modal-form-group">
-                    <label className="modal-label">Description (Optional)</label>
-                    <input
-                      type="text"
-                      className="modal-input"
-                      placeholder="A safe space for mid-terms ranting..."
-                      value={newRoomDesc}
-                      onChange={(e) => setNewRoomDesc(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="modal-form-group">
-                    <label className="modal-label">Tags (comma separated)</label>
-                    <input
-                      type="text"
-                      className="modal-input"
-                      placeholder="exams, chill, coffee, lofi"
-                      value={newRoomTags}
-                      onChange={(e) => setNewRoomTags(e.target.value)}
-                    />
-                  </div>
+              <form onSubmit={handleCreateSubmit}>
+                <div className="modal-form-group">
+                  <label className="modal-label">
+                    {activePinTab === 'room' ? 'Lounge Name *' : activePinTab === 'marketplace' ? 'Item Title *' : 'Item Description / Name *'}
+                  </label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    placeholder={
+                      activePinTab === 'room'
+                        ? 'e.g. 3AM Chill Corner, Late Night Cram'
+                        : activePinTab === 'marketplace'
+                        ? 'e.g. TI-84 Plus CE, Mini Fridge, Bike'
+                        : 'e.g. Blue Hydro Flask, Sony WH-1000XM4'
+                    }
+                    value={newRoomName}
+                    onChange={(e) => setNewRoomName(e.target.value)}
+                    required
+                    autoFocus
+                  />
                 </div>
+
+                {/* Specific Fields for Social Lounge */}
+                {activePinTab === 'room' && (
+                  <>
+                    <div className="modal-form-group">
+                      <label className="modal-label">Custom Room Code (Optional)</label>
+                      <input
+                        type="text"
+                        className="modal-input"
+                        placeholder="e.g. COZY42 (or leave blank to auto-generate)"
+                        value={newRoomCode}
+                        onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
+                        maxLength={10}
+                      />
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        Friends can enter this code to join your room immediately.
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div className="modal-form-group">
+                        <label className="modal-label">Category</label>
+                        <select
+                          className="modal-input"
+                          value={newRoomCategory}
+                          onChange={(e) => setNewRoomCategory(e.target.value)}
+                        >
+                          <option value="General">🛋️ General Chill</option>
+                          <option value="Study">📚 Study / Focus</option>
+                          <option value="Rant">📢 Anonymous Vent</option>
+                          <option value="Art">🎨 Art / Canvas</option>
+                          <option value="Mini-Game">🎮 Multiplayer Games</option>
+                        </select>
+                      </div>
+
+                      <div className="modal-form-group">
+                        <label className="modal-label">Multiplayer Mini-Game</label>
+                        <select
+                          className="modal-input"
+                          value={newRoomGame}
+                          onChange={(e) => setNewRoomGame(e.target.value)}
+                        >
+                          {GAME_OPTIONS.map(g => (
+                            <option key={g.id} value={g.id}>{g.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="modal-form-group">
+                      <label className="modal-label">Tags (comma separated)</label>
+                      <input
+                        type="text"
+                        className="modal-input"
+                        placeholder="exams, chill, coffee, lofi"
+                        value={newRoomTags}
+                        onChange={(e) => setNewRoomTags(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Specific Fields for Marketplace */}
+                {activePinTab === 'marketplace' && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div className="modal-form-group">
+                        <label className="modal-label">Price / Terms</label>
+                        <input
+                          type="text"
+                          className="modal-input"
+                          placeholder="$25, Free, or Trade"
+                          value={mktPrice}
+                          onChange={(e) => setMktPrice(e.target.value)}
+                        />
+                      </div>
+                      <div className="modal-form-group">
+                        <label className="modal-label">Listing Type</label>
+                        <select
+                          className="modal-input"
+                          value={mktType}
+                          onChange={(e) => setMktType(e.target.value)}
+                        >
+                          <option value="sell">Sell</option>
+                          <option value="rent">Rent / Borrow</option>
+                          <option value="trade">Trade</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div className="modal-form-group">
+                        <label className="modal-label">Condition</label>
+                        <select
+                          className="modal-input"
+                          value={mktCondition}
+                          onChange={(e) => setMktCondition(e.target.value)}
+                        >
+                          <option value="Brand New">Brand New</option>
+                          <option value="Like New">Like New</option>
+                          <option value="Good">Good</option>
+                          <option value="Fair">Fair</option>
+                        </select>
+                      </div>
+                      <div className="modal-form-group">
+                        <label className="modal-label">Photo URL (Optional)</label>
+                        <input
+                          type="url"
+                          className="modal-input"
+                          placeholder="https://images.unsplash.com/..."
+                          value={mktPhotoUrl}
+                          onChange={(e) => setMktPhotoUrl(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Specific Fields for Lost & Found */}
+                {activePinTab === 'lostfound' && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div className="modal-form-group">
+                        <label className="modal-label">Post Type</label>
+                        <select
+                          className="modal-input"
+                          value={lfCategory}
+                          onChange={(e) => setLfCategory(e.target.value)}
+                        >
+                          <option value="lost">🔍 I Lost Something</option>
+                          <option value="found">🙌 I Found Something</option>
+                        </select>
+                      </div>
+                      <div className="modal-form-group">
+                        <label className="modal-label">Date & Location Spotted</label>
+                        <input
+                          type="text"
+                          className="modal-input"
+                          placeholder="Today near Library 2nd floor"
+                          value={lfDateLoc}
+                          onChange={(e) => setLfDateLoc(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="modal-form-group">
+                      <label className="modal-label">Photo URL (Optional)</label>
+                      <input
+                        type="url"
+                        className="modal-input"
+                        placeholder="https://..."
+                        value={lfPhotoUrl}
+                        onChange={(e) => setLfPhotoUrl(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="modal-form-group">
+                  <label className="modal-label">Description</label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    placeholder="Provide details for campus peers..."
+                    value={newRoomDesc}
+                    onChange={(e) => setNewRoomDesc(e.target.value)}
+                  />
+                </div>
+
+                {/* Pin Location Indicator */}
+                {viewMode === 'map' && (
+                  <div
+                    style={{
+                      background: 'var(--bg-well)',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.8rem',
+                      marginBottom: '16px'
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Pin Location: </span>
+                      <strong style={{ color: 'var(--text-primary)' }}>
+                        {pinCoords.lat.toFixed(4)}, {pinCoords.lng.toFixed(4)}
+                      </strong>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-pill-secondary"
+                      style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                      onClick={() => {
+                        setIsModalOpen(false);
+                        setIsPlacingPin(true);
+                      }}
+                    >
+                      🎯 Pick on Map
+                    </button>
+                  </div>
+                )}
 
                 <div className="modal-actions">
                   <motion.button
@@ -569,7 +784,7 @@ export default function Lobby({
                     type="submit"
                     className="btn-pill-primary"
                   >
-                    Create & Enter ➔
+                    {activePinTab === 'room' ? 'Create Lounge ➔' : 'Drop Pin on Campus ➔'}
                   </motion.button>
                 </div>
               </form>
@@ -577,6 +792,30 @@ export default function Lobby({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Lost & Found Comments Modal */}
+      {currentLostFoundPin && (
+        <LostFoundModal
+          pin={currentLostFoundPin}
+          userProfile={userProfile}
+          theme={theme}
+          onClose={() => setActiveLostFoundPinId(null)}
+          onAddComment={onAddLostFoundComment}
+          onResolve={onUpdatePin}
+        />
+      )}
+
+      {/* Campus Marketplace & Trade Comments Modal */}
+      {currentTradePin && (
+        <TradeModal
+          pin={currentTradePin}
+          userProfile={userProfile}
+          theme={theme}
+          onClose={() => setActiveTradePinId(null)}
+          onAddComment={onAddTradeComment}
+          onJoinRoom={onJoinRoom}
+        />
+      )}
     </div>
   );
 }

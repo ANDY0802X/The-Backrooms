@@ -490,16 +490,105 @@
   transition: all 0.2s var(--ease-sqs);
 }
 
-.glass-panel-interactive.room-card:hover .room-type-icon {
-  opacity: 1;
-  transform: scale(1.08);
+/* ----------------------------------------------------
+   VIEW MODE TOGGLE & CAMPUS MAP WRAPPER
+   ---------------------------------------------------- */
+.view-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-well);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+}
+
+.view-mode-btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.22s var(--ease-sqs);
+}
+
+.view-mode-btn:hover {
   color: var(--text-primary);
 }
 
-.glass-panel-interactive.room-card:hover {
-  border-color: var(--text-muted);
+.view-mode-btn.active {
+  background: var(--text-primary);
+  color: var(--bg-core);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme='dark'] .view-mode-btn.active {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+[data-theme='light'] .view-mode-btn.active {
+  background: #18181b;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+/* Map Section Wrapper */
+.lobby-map-section {
+  margin-top: 8px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Pin Creation Tabs inside Modal */
+.pin-type-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 12px;
+}
+
+.pin-type-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-well);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.pin-type-tab.active {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+}
+
+[data-theme='dark'] .pin-type-tab.active {
+  border-color: #ff3b3b;
+  box-shadow: 0 0 12px rgba(255, 59, 59, 0.25);
+}
+
+[data-theme='light'] .pin-type-tab.active {
+  border-color: #18181b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 
