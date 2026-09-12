@@ -469,85 +469,87 @@ export default function Lobby({
                 </motion.button>
               </div>
 
-              <form onSubmit={handleCreateSubmit}>
-                <div className="modal-form-group">
-                  <label className="modal-label">Lounge Name *</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="e.g. 3AM Chill Corner, Late Night Cram"
-                    value={newRoomName}
-                    onChange={(e) => setNewRoomName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                <div className="modal-form-group">
-                  <label className="modal-label">Custom Room Code (Optional)</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="e.g. COZY42 (or leave blank to auto-generate)"
-                    value={newRoomCode}
-                    onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
-                    maxLength={10}
-                  />
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                    Friends can enter this code from the home page to join your room immediately.
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <form onSubmit={handleCreateSubmit} className="modal-form-flex">
+                <div className="modal-form-scroll">
                   <div className="modal-form-group">
-                    <label className="modal-label">Category</label>
-                    <select
+                    <label className="modal-label">Lounge Name *</label>
+                    <input
+                      type="text"
                       className="modal-input"
-                      value={newRoomCategory}
-                      onChange={(e) => setNewRoomCategory(e.target.value)}
-                    >
-                      <option value="General">🛋️ General Chill</option>
-                      <option value="Study">📚 Study / Focus</option>
-                      <option value="Rant">📢 Anonymous Vent</option>
-                      <option value="Art">🎨 Art / Canvas</option>
-                      <option value="Mini-Game">🎮 Multiplayer Games</option>
-                    </select>
+                      placeholder="e.g. 3AM Chill Corner, Late Night Cram"
+                      value={newRoomName}
+                      onChange={(e) => setNewRoomName(e.target.value)}
+                      required
+                      autoFocus
+                    />
                   </div>
 
                   <div className="modal-form-group">
-                    <label className="modal-label">Multiplayer Mini-Game</label>
-                    <select
+                    <label className="modal-label">Custom Room Code (Optional)</label>
+                    <input
+                      type="text"
                       className="modal-input"
-                      value={newRoomGame}
-                      onChange={(e) => setNewRoomGame(e.target.value)}
-                    >
-                      {GAME_OPTIONS.map(g => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
+                      placeholder="e.g. COZY42 (or leave blank to auto-generate)"
+                      value={newRoomCode}
+                      onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
+                      maxLength={10}
+                    />
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      Friends can enter this code from the home page to join your room immediately.
+                    </span>
                   </div>
-                </div>
 
-                <div className="modal-form-group">
-                  <label className="modal-label">Description (Optional)</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="A safe space for mid-terms ranting..."
-                    value={newRoomDesc}
-                    onChange={(e) => setNewRoomDesc(e.target.value)}
-                  />
-                </div>
+                  <div className="modal-grid-2">
+                    <div className="modal-form-group">
+                      <label className="modal-label">Category</label>
+                      <select
+                        className="modal-input"
+                        value={newRoomCategory}
+                        onChange={(e) => setNewRoomCategory(e.target.value)}
+                      >
+                        <option value="General">🛋️ General Chill</option>
+                        <option value="Study">📚 Study / Focus</option>
+                        <option value="Rant">📢 Anonymous Vent</option>
+                        <option value="Art">🎨 Art / Canvas</option>
+                        <option value="Mini-Game">🎮 Multiplayer Games</option>
+                      </select>
+                    </div>
 
-                <div className="modal-form-group">
-                  <label className="modal-label">Tags (comma separated)</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="exams, chill, coffee, lofi"
-                    value={newRoomTags}
-                    onChange={(e) => setNewRoomTags(e.target.value)}
-                  />
+                    <div className="modal-form-group">
+                      <label className="modal-label">Multiplayer Mini-Game</label>
+                      <select
+                        className="modal-input"
+                        value={newRoomGame}
+                        onChange={(e) => setNewRoomGame(e.target.value)}
+                      >
+                        {GAME_OPTIONS.map(g => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="modal-form-group">
+                    <label className="modal-label">Description (Optional)</label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="A safe space for mid-terms ranting..."
+                      value={newRoomDesc}
+                      onChange={(e) => setNewRoomDesc(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="modal-form-group">
+                    <label className="modal-label">Tags (comma separated)</label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="exams, chill, coffee, lofi"
+                      value={newRoomTags}
+                      onChange={(e) => setNewRoomTags(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="modal-actions">

@@ -195,14 +195,6 @@
   color: var(--bg-core);
   border-color: var(--text-primary);
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-}
-
-[data-theme='dark'] .arena-tab-pill.active {
-  background: var(--accent-gradient);
-  color: #ffffff;
-  border-color: var(--accent);
-  box-shadow: 0 4px 16px var(--accent-glow);
 }
 
 .arena-round-actions {
