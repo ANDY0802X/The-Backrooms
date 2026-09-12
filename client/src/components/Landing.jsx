@@ -4,14 +4,6 @@ import './Landing.css';
 import { sounds } from '../utils/sound';
 import { AVATARS, generateAnonymousIdentity } from '../utils/identity';
 
-const MINI_GAMES_SHOWCASE = [
-  { id: 'scribble', icon: '🎨', name: 'Campus Scribble', desc: 'Speed Pictionary' },
-  { id: 'trivia', icon: '⚡', name: 'Trivia Blitz', desc: '14s Rapid Buzzers' },
-  { id: 'wordchain', icon: '🔗', name: 'Word Chain', desc: 'Combo Builder' },
-  { id: 'emojipop', icon: '💥', name: 'Emoji Pop', desc: 'Reflex Arcade' },
-  { id: 'truthvent', icon: '🎭', name: 'Truth & Vent', desc: 'Campus Confessions' }
-];
-
 export default function Landing({
   onEnterLounge,
   onCreateLoungeDirect,
@@ -23,18 +15,19 @@ export default function Landing({
   onToggleTheme
 }) {
   const [showCodeInput, setShowCodeInput] = useState(false);
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [inputCode, setInputCode] = useState('');
 
   const displayName = userProfile?.name !== undefined ? userProfile.name : '';
   const currentAvatar = userProfile?.avatar || '😴';
 
-  const handleSelectAvatar = (av) => {
+  // Cycle avatar
+  const handleCycleAvatar = () => {
     sounds.playPop();
+    const idx = AVATARS.indexOf(currentAvatar);
+    const newIdx = (idx + 1) % AVATARS.length;
     if (typeof onUpdateUserProfile === 'function') {
-      onUpdateUserProfile({ ...userProfile, avatar: av });
+      onUpdateUserProfile({ ...userProfile, avatar: AVATARS[newIdx] });
     }
-    setShowAvatarPicker(false);
   };
 
   const handleReroll = () => {
@@ -80,7 +73,6 @@ export default function Landing({
         <div className="landing-brand">
           <span className="brand-dot"></span>
           <span className="brand-name">TheBackrooms</span>
-          <span className="brand-version-pill font-mono">CAMPUS v2</span>
         </div>
 
         <div className="landing-header-controls">
@@ -111,18 +103,16 @@ export default function Landing({
         </div>
       </header>
 
-      {/* Main Focus Area: Headline, Identity Card, Primary Action */}
+      {/* Main Focus Area: Headline, One Input, One Primary Action */}
       <main className="landing-center-stage">
         <motion.div
-          initial={{ opacity: 0, y: 14 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           className="landing-hero-block"
         >
-          {/* Proximity & Campus Status Pill */}
-          <div className="landing-proximity-pill font-mono">
-            <span className="proximity-live-dot"></span>
-            <span>~100M CAMPUS PROXIMITY ZONE • ZERO-TRACE</span>
+          <div className="landing-kicker font-mono">
+            <span>EPHEMERAL CAMPUS SANCTUARY</span>
           </div>
 
           <h1 className="landing-headline">
@@ -130,13 +120,13 @@ export default function Landing({
           </h1>
 
           <p className="landing-subhead">
-            Zero logins. Anonymous student lounges to vent freely, co-draw on a shared canvas, and play 5 low-stakes multiplayer games with peers around you.
+            Zero logins. Anonymous student lounges to vent freely, co-draw on a shared canvas, and play low-stakes games. Everything disappears when the room empties.
           </p>
         </motion.div>
 
         {/* Unified Identity Card (Linear / Apple Minimalism) */}
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
           className="landing-action-card"
@@ -147,9 +137,9 @@ export default function Landing({
               <button
                 type="button"
                 className="avatar-bubble-trigger"
-                onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                title="Click to pick avatar"
-                aria-label="Choose avatar emoji"
+                onClick={handleCycleAvatar}
+                title="Click to cycle avatar"
+                aria-label="Cycle avatar emoji"
               >
                 <span className="avatar-emoji">{currentAvatar}</span>
               </button>
@@ -174,43 +164,19 @@ export default function Landing({
                 type="button"
                 className="shuffle-alias-btn"
                 onClick={handleReroll}
-                title="Shuffle new random identity"
+                title="Generate new random identity"
                 aria-label="Shuffle random identity"
               >
                 🎲
               </button>
             </div>
 
-            {/* Avatar Quick Picker Popover */}
-            <AnimatePresence>
-              {showAvatarPicker && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="avatar-popover-grid"
-                >
-                  {AVATARS.slice(0, 18).map((av) => (
-                    <button
-                      key={av}
-                      type="button"
-                      className={`avatar-choice-btn ${currentAvatar === av ? 'selected' : ''}`}
-                      onClick={() => handleSelectAvatar(av)}
-                    >
-                      {av}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Single Tactile Primary Action Button */}
+            {/* Single Clear Primary Action Button */}
             <button
               type="submit"
               className="primary-enter-btn"
             >
-              <span>Enter Campus Lounges</span>
+              <span>Enter Lounges</span>
               <span className="btn-arrow" aria-hidden="true">→</span>
             </button>
           </form>
@@ -262,21 +228,6 @@ export default function Landing({
           </div>
         </motion.div>
 
-        {/* 5 Mini-Games Showcase Ribbon */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.16 }}
-          className="mini-games-ribbon"
-        >
-          {MINI_GAMES_SHOWCASE.map((g) => (
-            <div key={g.id} className="game-ribbon-pill font-mono" title={g.desc}>
-              <span className="ribbon-icon">{g.icon}</span>
-              <span className="ribbon-name">{g.name}</span>
-            </div>
-          ))}
-        </motion.div>
-
         {/* Quiet Ephemeral Assurance */}
         <motion.p
           initial={{ opacity: 0 }}
@@ -284,15 +235,13 @@ export default function Landing({
           transition={{ duration: 0.5, delay: 0.2 }}
           className="landing-reassurance font-mono"
         >
-          🔒 Ephemeral RAM state only • No accounts • Auto-destructs when empty
+          🔒 In-memory state only • No accounts • No persistent records
         </motion.p>
       </main>
 
       {/* Quiet Minimal Footer */}
       <footer className="landing-footer font-mono">
         <span>TheBackrooms</span>
-        <span>•</span>
-        <span>Track 2 Campus Problem Solver</span>
         <span>•</span>
         <span>Zero-trace student decompression</span>
       </footer>

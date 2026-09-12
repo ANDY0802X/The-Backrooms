@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Lobby.css';
 import { sounds } from '../utils/sound';
-import { CAMPUS_PRESETS } from '../utils/geolocation';
 
-const CATEGORIES = ['All', '📍 Nearby (<100m)', 'General', 'Study', 'Rant', 'Art', 'Mini-Game'];
+const CATEGORIES = ['All', 'General', 'Study', 'Rant', 'Art', 'Mini-Game'];
 
 const GAME_OPTIONS = [
   { id: 'scribble', name: '🎨 Campus Scribble (Speed Pictionary)' },
@@ -13,8 +12,6 @@ const GAME_OPTIONS = [
   { id: 'emojipop', name: '💥 Emoji Pop Reflex (Fast Reaction)' },
   { id: 'truthvent', name: '🎭 Truth, Vent & Dare (Confessions)' }
 ];
-
-const RANDOM_CODES = ['COFFEE', 'TRIVIA', 'DOODLE', 'CHAINS', 'ARCADE', 'NIGHT', 'CAMPUS', 'CHILL', 'MIDNIGHT', 'SANCTUARY'];
 
 export default function Lobby({
   rooms = [],
@@ -29,21 +26,12 @@ export default function Lobby({
   onToggleTheme,
   socket,
   coords,
-  campusPreset,
-  onSelectCampusPreset,
-  locationStatus,
-  locationError,
-  radarActive,
-  onToggleRadar,
-  preferredRadarGames = [],
-  onToggleRadarGame,
   nearbyRoomMap = {}
 }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
-  const [toastMessage, setToastMessage] = useState(null);
 
   // New room modal state
   const [newRoomName, setNewRoomName] = useState('');
@@ -52,25 +40,9 @@ export default function Lobby({
   const [newRoomGame, setNewRoomGame] = useState('scribble');
   const [newRoomDesc, setNewRoomDesc] = useState('');
   const [newRoomTags, setNewRoomTags] = useState('');
-  const [newRoomProximity, setNewRoomProximity] = useState(true);
-  const [newRoomRadius, setNewRoomRadius] = useState(100);
-  const [newRoomIsPrivate, setNewRoomIsPrivate] = useState(false);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(prev => (prev === msg ? null : prev));
-    }, 3200);
-  };
 
   const filteredRooms = rooms.filter(room => {
-    let matchesCat = true;
-    if (selectedCategory === '📍 Nearby (<100m)') {
-      matchesCat = room.isProximity && nearbyRoomMap[room.id]?.isNearby;
-    } else if (selectedCategory !== 'All') {
-      matchesCat = room.category === selectedCategory;
-    }
-
+    const matchesCat = selectedCategory === 'All' || room.category === selectedCategory;
     const query = searchQuery.toLowerCase().trim();
     if (!query) return matchesCat;
     const matchesSearch =
@@ -88,15 +60,13 @@ export default function Lobby({
     sounds.playSuccess();
     onCreateRoom({
       name: newRoomName.trim(),
-      code: newRoomCode.trim().toUpperCase() || undefined,
+      code: newRoomCode.trim() || undefined,
       category: newRoomCategory,
       selectedGame: newRoomGame,
-      description: newRoomDesc.trim() || 'A chill space to decompress.',
+      description: newRoomDesc.trim(),
       tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean),
-      isProximity: newRoomProximity,
-      radius: newRoomRadius,
-      isPrivate: newRoomIsPrivate,
-      coords
+      coords,
+      isProximity: true
     });
 
     setIsModalOpen(false);
@@ -104,7 +74,6 @@ export default function Lobby({
     setNewRoomCode('');
     setNewRoomDesc('');
     setNewRoomTags('');
-    setNewRoomIsPrivate(false);
   };
 
   const handleSearchKeyDown = (e) => {
@@ -126,28 +95,8 @@ export default function Lobby({
       navigator.clipboard.writeText(code);
       sounds.playPop();
       setCopiedCode(code);
-      showToast(`Copied #${code} to clipboard!`);
       setTimeout(() => setCopiedCode(null), 1800);
     } catch (e) {}
-  };
-
-  const handleQuickMatch = () => {
-    const nearbyOnly = rooms.filter(r => r.isProximity && nearbyRoomMap[r.id]?.isNearby);
-    const pool = nearbyOnly.length > 0 ? nearbyOnly : rooms;
-    if (pool.length > 0) {
-      const chosen = pool[Math.floor(Math.random() * pool.length)];
-      sounds.playChime();
-      onJoinRoom(chosen.id);
-    } else {
-      sounds.playBoing();
-      showToast('No active lounges right now. Create one to get started!');
-    }
-  };
-
-  const handleRandomizeCode = () => {
-    sounds.playPop();
-    const pick = RANDOM_CODES[Math.floor(Math.random() * RANDOM_CODES.length)];
-    setNewRoomCode(pick);
   };
 
   const getGameBadge = (gameType) => {
@@ -163,20 +112,6 @@ export default function Lobby({
 
   return (
     <div className="lobby-shell">
-      {/* Sleek Floating Toast Notification */}
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="lobby-floating-toast font-mono"
-          >
-            <span>{toastMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Top Header */}
       <header className="lobby-top-bar">
         <div className="lobby-brand-group" onClick={onBackToLanding} title="Back to home">
@@ -226,8 +161,14 @@ export default function Lobby({
           <button
             type="button"
             className="lobby-quiet-btn"
-            onClick={handleQuickMatch}
-            title="Join random nearby room"
+            onClick={() => {
+              if (rooms.length > 0) {
+                const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
+                sounds.playChime();
+                onJoinRoom(randomRoom.id);
+              }
+            }}
+            title="Join random room"
           >
             ⚡ Quick Match
           </button>
@@ -244,81 +185,12 @@ export default function Lobby({
         </div>
       </header>
 
-      {/* Proximity Radar & Campus GPS HUD */}
-      <section className={`proximity-radar-hud ${radarActive ? 'active' : ''}`}>
-        <div className="radar-status-group">
-          <div className={`radar-indicator-pill ${radarActive ? 'active' : ''}`}>
-            <span className={`radar-dot ${radarActive ? 'pulsing' : ''}`}></span>
-            <span className="radar-status-text font-mono">
-              {radarActive ? 'RADAR ACTIVE • SCANNING ~100M CLUSTERS' : 'PROXIMITY RADAR STANDBY'}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className={`radar-toggle-btn font-mono ${radarActive ? 'active' : ''}`}
-            onClick={onToggleRadar}
-          >
-            {radarActive ? '⏹ Stop Radar' : '📡 Find Nearby Players (100m)'}
-          </button>
-        </div>
-
-        {/* Location / Campus Preset Selector */}
-        <div className="campus-location-selector">
-          <label className="location-label font-mono">📍 GPS Anchor:</label>
-          <select
-            className="location-select font-mono"
-            value={campusPreset}
-            onChange={(e) => onSelectCampusPreset(e.target.value)}
-            title="Switch simulated campus location or use real GPS sensor"
-          >
-            {CAMPUS_PRESETS.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.name}
-              </option>
-            ))}
-          </select>
-          {locationStatus === 'locating' && (
-            <span className="location-loading-spinner font-mono">⌛ Locating...</span>
-          )}
-          {locationError && (
-            <span className="location-err-text font-mono" title={locationError}>⚠️ Denied</span>
-          )}
-        </div>
-
-        {/* Radar Game Preferences (When radar is enabled) */}
-        {radarActive && (
-          <div className="radar-game-preference-row">
-            <span className="radar-pref-label font-mono">Auto-Match For:</span>
-            <div className="radar-game-pills">
-              {GAME_OPTIONS.map((g) => {
-                const isSelected = preferredRadarGames.includes(g.id);
-                return (
-                  <button
-                    key={g.id}
-                    type="button"
-                    className={`radar-game-pill font-mono ${isSelected ? 'selected' : ''}`}
-                    onClick={() => onToggleRadarGame(g.id)}
-                  >
-                    {g.name.split(' ')[0]} {g.name.split(' ')[1]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </section>
-
       {/* Main Filter & Search Toolbar */}
       <section className="lobby-toolbar">
-        {/* Segmented Category Control */}
+        {/* Segmented Category Control (Linear/Notion Style) */}
         <div className="category-segmented-strip font-mono">
           {CATEGORIES.map(cat => {
-            let count = 0;
-            if (cat === 'All') count = rooms.length;
-            else if (cat === '📍 Nearby (<100m)') count = rooms.filter(r => r.isProximity && nearbyRoomMap[r.id]?.isNearby).length;
-            else count = rooms.filter(r => r.category === cat).length;
-
+            const count = cat === 'All' ? rooms.length : rooms.filter(r => r.category === cat).length;
             const isActive = selectedCategory === cat;
             return (
               <button
@@ -343,7 +215,7 @@ export default function Lobby({
           <input
             type="text"
             className="search-code-input"
-            placeholder="Search topic or press Enter for #CODE..."
+            placeholder="Search rooms by name, topic, or enter #CODE..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
@@ -364,60 +236,35 @@ export default function Lobby({
       <main className="rooms-container">
         {filteredRooms.length === 0 ? (
           <div className="rooms-empty-state">
-            <p className="empty-title">No active lounges match your filter.</p>
-            <p className="empty-sub">
-              {searchQuery.trim()
-                ? `Press Enter to join with code #${searchQuery.replace('#', '').toUpperCase()} or create a lounge.`
-                : 'Create an ephemeral room and invite nearby peers on campus.'}
-            </p>
+            <p className="empty-title">No active lounges match your search.</p>
+            <p className="empty-sub">Create a new lounge or press Enter to join with code #{searchQuery.replace('#', '').toUpperCase()}.</p>
             <button
               type="button"
               className="lobby-primary-btn"
               style={{ marginTop: '16px' }}
               onClick={() => setIsModalOpen(true)}
             >
-              + Create Lounge
+              Create Lounge
             </button>
           </div>
         ) : (
           <div className="rooms-grid">
             {filteredRooms.map((room) => {
               const roomCode = room.code || room.id.replace('lounge-', '').slice(0, 6).toUpperCase();
-              const proxInfo = nearbyRoomMap[room.id];
-              const isProx = room.isProximity;
-              const isOutOfRange = isProx && proxInfo && !proxInfo.isNearby;
-
               return (
                 <div
                   key={room.id}
-                  className={`room-flat-card ${isOutOfRange ? 'out-of-range' : ''}`}
+                  className="room-flat-card"
                   onClick={() => {
-                    if (isOutOfRange) {
-                      sounds.playBoing();
-                      showToast(`🚫 This room is locked to ~${room.radius || 100}m. Your GPS anchor is out of range.`);
-                      return;
-                    }
                     sounds.playChime();
                     onJoinRoom(room.id);
                   }}
                 >
                   {/* Card Meta Top */}
                   <div className="card-top-meta">
-                    <div className="card-badge-group">
-                      <span className="card-game-pill font-mono">
-                        {getGameBadge(room.selectedGame)}
-                      </span>
-                      {isProx && (
-                        <span className={`card-proximity-pill font-mono ${isOutOfRange ? 'out-of-range' : 'in-range'}`}>
-                          📍 ~{room.radius || 100}m
-                        </span>
-                      )}
-                      {proxInfo && (
-                        <span className="card-distance-pill font-mono">
-                          {proxInfo.distanceBucket}
-                        </span>
-                      )}
-                    </div>
+                    <span className="card-game-pill font-mono">
+                      {getGameBadge(room.selectedGame)}
+                    </span>
                     <div className="card-presence-indicator font-mono">
                       <span className="card-presence-dot"></span>
                       <span>{room.userCount || 1} online</span>
@@ -447,13 +294,16 @@ export default function Lobby({
                   {/* Card Footer */}
                   <div className="card-bottom">
                     <div className="card-tags-list font-mono">
+                      {nearbyRoomMap && nearbyRoomMap[room.id] && (
+                        <span className="card-tag" style={{ color: nearbyRoomMap[room.id].isNearby ? 'var(--accent)' : 'var(--text-muted)' }}>
+                          📍 {nearbyRoomMap[room.id].distanceBucket}
+                        </span>
+                      )}
                       {room.tags && room.tags.map((tag, i) => (
                         <span key={i} className="card-tag">#{tag}</span>
                       ))}
                     </div>
-                    <span className={`card-action-hint font-mono ${isOutOfRange ? 'locked' : ''}`}>
-                      {isOutOfRange ? '🚫 Locked (>100m)' : 'Step Inside ➔'}
-                    </span>
+                    <span className="card-action-hint font-mono">Join ➔</span>
                   </div>
                 </div>
               );
@@ -511,24 +361,14 @@ export default function Lobby({
                       value={newRoomCategory}
                       onChange={(e) => setNewRoomCategory(e.target.value)}
                     >
-                      {CATEGORIES.filter(c => c !== 'All' && !c.includes('Nearby')).map(c => (
+                      {CATEGORIES.filter(c => c !== 'All').map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="modal-field">
-                    <div className="field-label-row">
-                      <label className="field-label font-mono">Room Code (Optional)</label>
-                      <button
-                        type="button"
-                        className="modal-dice-helper font-mono"
-                        onClick={handleRandomizeCode}
-                        title="Generate random code"
-                      >
-                        🎲 Random
-                      </button>
-                    </div>
+                    <label className="field-label font-mono">Room Code (Optional)</label>
                     <input
                       type="text"
                       className="modal-input font-mono"
@@ -551,60 +391,6 @@ export default function Lobby({
                       <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
                   </select>
-                </div>
-
-                {/* Proximity Zone Toggle */}
-                <div className="modal-field proximity-toggle-field">
-                  <div className="proximity-toggle-header">
-                    <label className="proximity-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={newRoomProximity}
-                        onChange={(e) => setNewRoomProximity(e.target.checked)}
-                        className="proximity-checkbox"
-                      />
-                      <span className="proximity-toggle-title">📍 Lock to Campus Proximity Zone</span>
-                    </label>
-                    {newRoomProximity && (
-                      <select
-                        className="modal-select-sm font-mono"
-                        value={newRoomRadius}
-                        onChange={(e) => setNewRoomRadius(Number(e.target.value))}
-                        title="Proximity zone limit"
-                      >
-                        <option value={25}>25m (Same Study Table)</option>
-                        <option value={50}>50m (Same Floor / Cafe)</option>
-                        <option value={100}>100m (Standard Lounge)</option>
-                        <option value={250}>250m (Quad Sector)</option>
-                        <option value={500}>500m (Campus Wide)</option>
-                      </select>
-                    )}
-                  </div>
-                  <p className="proximity-note font-mono">
-                    {newRoomProximity
-                      ? `🔒 Only students physically within ~${newRoomRadius}m of your current GPS anchor can discover or join. Coordinates are NEVER saved or broadcast.`
-                      : `🔓 Open worldwide. Anyone with the code or browsing the lobby can join.`}
-                  </p>
-                </div>
-
-                {/* Friend-Created Private Session Toggle */}
-                <div className="modal-field proximity-toggle-field" style={{ marginTop: '2px' }}>
-                  <div className="proximity-toggle-header">
-                    <label className="proximity-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={newRoomIsPrivate}
-                        onChange={(e) => setNewRoomIsPrivate(e.target.checked)}
-                        className="proximity-checkbox"
-                      />
-                      <span className="proximity-toggle-title">🔒 Hidden Private Session (Direct #Code Only)</span>
-                    </label>
-                  </div>
-                  <p className="proximity-note font-mono">
-                    {newRoomIsPrivate
-                      ? `🤫 This lounge will be hidden from the public lobby. Only friends who enter #${newRoomCode || 'CODE'} can join.`
-                      : `🌐 Listed in public lobby for students to discover.`}
-                  </p>
                 </div>
 
                 <div className="modal-field">

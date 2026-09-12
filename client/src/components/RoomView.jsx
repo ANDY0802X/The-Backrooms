@@ -33,9 +33,7 @@ export default function RoomView({
     category: 'General',
     selectedGame: 'scribble',
     description: '',
-    tags: [],
-    isProximity: false,
-    radius: 100
+    tags: []
   });
   const [activeUsers, setActiveUsers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -44,12 +42,6 @@ export default function RoomView({
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [floatingParticles, setFloatingParticles] = useState([]);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [proximityDriftWarning, setProximityDriftWarning] = useState(null);
-  const [mobileTab, setMobileTab] = useState('arena'); // 'arena' | 'chat'
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const [stealthMode, setStealthMode] = useState(false);
-  const [isSpectator, setIsSpectator] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   // Multi-Game State
   const [gameState, setGameState] = useState({
@@ -107,31 +99,20 @@ export default function RoomView({
 
   // Copy Room Code
   const handleCopyRoomCode = () => {
-    const displayCode = roomData.code || roomId.replace('lounge-', '').slice(0, 6).toUpperCase();
+    const code = roomData.code || roomId.replace('lounge-', '').slice(0, 6).toUpperCase();
     try {
-      navigator.clipboard.writeText(displayCode);
+      navigator.clipboard.writeText(code);
       sounds.playPop();
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
     } catch (e) {}
   };
 
-  // Escape key for Campus Stealth / Panic Screen
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setStealthMode(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   // Socket & Presence Sync
   useEffect(() => {
     if (!socket) return;
 
-    socket.emit('join_room', { roomId, user: { ...userProfile, isSpectator }, coords });
+    socket.emit('join_room', { roomId, user: userProfile, coords });
 
     socket.on('room_joined_data', (data) => {
       if (data.room) setRoomData(data.room);
@@ -158,15 +139,10 @@ export default function RoomView({
       setActiveUsers(usersList || []);
     });
 
-    socket.on('proximity_drift_warning', ({ message }) => {
-      setProximityDriftWarning(message);
-    });
-
     socket.on('new_message', (msg) => {
       setMessages(prev => [...prev, msg]);
       if (msg.sender?.name !== userProfile.name) {
         sounds.playPop();
-        setUnreadChatCount(prev => prev + 1);
       }
     });
 
@@ -290,24 +266,6 @@ export default function RoomView({
       socket.emit('leave_room', { roomId });
     };
   }, [socket, roomId, userProfile]);
-
-  // Periodic In-Session Proximity Verification Ping (18s)
-  useEffect(() => {
-    if (!socket || !roomId || !roomData.isProximity) return;
-
-    const pingProximity = () => {
-      socket.emit('verify_proximity_ping', { roomId, coords }, (res) => {
-        if (res && res.inRange === false) {
-          setProximityDriftWarning(`You have drifted outside the ~${roomData.radius || 100}m campus proximity zone.`);
-        } else {
-          setProximityDriftWarning(null);
-        }
-      });
-    };
-
-    const interval = setInterval(pingProximity, 18000);
-    return () => clearInterval(interval);
-  }, [socket, roomId, roomData.isProximity, coords, roomData.radius]);
 
   const triggerReactionParticle = (emoji) => {
     const newParticle = {
@@ -482,23 +440,6 @@ export default function RoomView({
     if (socket) socket.emit('switch_game', { gameType });
   };
 
-  const GAME_PLAYLIST = ['scribble', 'trivia', 'wordchain', 'emojipop', 'truthvent'];
-  const handleNextPlaylistGame = () => {
-    sounds.playBoing();
-    const currentIndex = GAME_PLAYLIST.indexOf(gameState.type);
-    const nextIndex = (currentIndex + 1) % GAME_PLAYLIST.length;
-    handleSwitchGame(GAME_PLAYLIST[nextIndex]);
-  };
-
-  const handleToggleSpectator = () => {
-    const nextVal = !isSpectator;
-    setIsSpectator(nextVal);
-    sounds.playPop();
-    if (socket) {
-      socket.emit('toggle_spectator', { isSpectator: nextVal });
-    }
-  };
-
   const handleToggleGame = () => {
     sounds.playPop();
     if (socket) socket.emit('toggle_game');
@@ -541,55 +482,9 @@ export default function RoomView({
   };
 
   const displayRoomCode = roomData.code || roomId.replace('lounge-', '').slice(0, 6).toUpperCase();
-  const myScore = gameState.scores?.[userProfile.id] || 0;
-  const sortedLeaderboard = [...activeUsers]
-    .map(u => ({
-      ...u,
-      score: gameState.scores?.[u.id] || 0
-    }))
-    .sort((a, b) => b.score - a.score);
 
   return (
     <div className="room-view-container">
-      {/* Campus Stealth / Panic Screen ("Boss Button") */}
-      {stealthMode && (
-        <div className="stealth-panic-overlay" onClick={() => setStealthMode(false)}>
-          <div className="stealth-notes-window" onClick={(e) => e.stopPropagation()}>
-            <div className="stealth-header">
-              <div className="stealth-header-title">
-                <span className="stealth-doc-icon">📄</span>
-                <span className="font-mono">CS301_Distributed_Systems_Lecture_09.pdf — Preview</span>
-              </div>
-              <button
-                type="button"
-                className="stealth-dismiss-btn font-mono"
-                onClick={() => setStealthMode(false)}
-              >
-                Resume Lounge (Esc) ➔
-              </button>
-            </div>
-            <div className="stealth-body">
-              <h2 className="stealth-topic">Section 5.3: Gossip Protocol & Proximity-Aware Distributed State</h2>
-              <p className="stealth-paragraph">
-                In peer-to-peer campus mesh networks, each node periodically disseminates heartbeat signals within bounded spherical coordinates (Haversine threshold: &le; 100m). If an active cluster reaches consensus, ephemeral sessions transition from candidate state to active quorum without persisting identifiers to relational disks.
-              </p>
-              <pre className="stealth-code-block font-mono">
-{`// Algorithmic Proof: Ephemeral Consensus Quorum
-function evaluateProximityCluster(candidates, radiusLimitMeters) {
-  return candidates.filter(peer => {
-    const d = calculateHaversineMeters(peer.anchor, localAnchor);
-    return d <= radiusLimitMeters && peer.state === "ACTIVE";
-  });
-}`}
-              </pre>
-              <div className="stealth-footer-hint font-mono">
-                <span>Press [Esc] or click anywhere to exit stealth mode</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Floating Reaction Particles */}
       {floatingParticles.map(p => (
         <div key={p.id} className="floating-reaction-particle" style={{ left: p.left, bottom: p.bottom }}>
@@ -614,11 +509,6 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
             <span className="badge-pill hover-lift" style={{ background: 'var(--bg-well)', color: 'var(--accent-lavender)' }}>
               {roomData.category}
             </span>
-            {roomData.isProximity && (
-              <span className="badge-pill font-mono" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                📍 ~{roomData.radius || 100}m Zone
-              </span>
-            )}
           </div>
 
           {/* Room Code Badge */}
@@ -660,51 +550,6 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
         </div>
 
         <div className="room-header-right">
-          {/* Session Leaderboard Scores */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.94 }}
-            className={`btn-pill-secondary hover-lift ${showLeaderboard ? 'active' : ''}`}
-            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-            onClick={() => {
-              sounds.playPop();
-              setShowLeaderboard(!showLeaderboard);
-            }}
-            title="Session Leaderboard & Scores"
-          >
-            🏆 Scores ({myScore} pts)
-          </motion.button>
-
-          {/* Spectator Mode Toggle */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.94 }}
-            className={`btn-pill-secondary hover-lift ${isSpectator ? 'spectator-active' : ''}`}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.82rem',
-              background: isSpectator ? 'rgba(139, 92, 246, 0.25)' : undefined,
-              borderColor: isSpectator ? 'var(--accent-lavender)' : undefined,
-              color: isSpectator ? '#c4b5fd' : undefined
-            }}
-            onClick={handleToggleSpectator}
-            title={isSpectator ? "Switch back to Player Mode" : "Switch to Spectator Mode (watch without competing)"}
-          >
-            {isSpectator ? '👀 Spectating' : '🎮 Playing'}
-          </motion.button>
-
-          {/* Stealth Mode Camouflage Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.94 }}
-            className="btn-pill-secondary hover-lift"
-            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-            onClick={() => setStealthMode(!stealthMode)}
-            title="Instant Camouflage / Study Screen (Esc)"
-          >
-            📚 Stealth
-          </motion.button>
-
           {/* Live Presence Ping Indicator */}
           <div className="room-ping-indicator hover-lift" title="Live active students connected">
             <span className="pulsing-ping-dot"></span>
@@ -743,45 +588,8 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
         </div>
       </header>
 
-      {proximityDriftWarning && (
-        <div className="proximity-drift-alert-banner font-mono">
-          <span>⚠️ {proximityDriftWarning}</span>
-          <button
-            type="button"
-            className="drift-dismiss-btn"
-            onClick={() => setProximityDriftWarning(null)}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Mobile Screen Pane Switcher (<768px) */}
-      <div className="mobile-view-switcher">
-        <button
-          type="button"
-          className={`mobile-switch-tab ${mobileTab === 'arena' ? 'active' : ''}`}
-          onClick={() => setMobileTab('arena')}
-        >
-          <span>🎮 Game Arena</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-switch-tab ${mobileTab === 'chat' ? 'active' : ''}`}
-          onClick={() => {
-            setMobileTab('chat');
-            setUnreadChatCount(0);
-          }}
-        >
-          <span>💬 Chat & Vents</span>
-          {unreadChatCount > 0 && (
-            <span className="mobile-unread-badge font-mono">{unreadChatCount}</span>
-          )}
-        </button>
-      </div>
-
       {/* Main Split Layout: Left In-Window Arena | Right Real-Time Chat */}
-      <main className={`room-split-layout show-${mobileTab}`}>
+      <main className="room-split-layout">
         {/* LEFT: Continuous In-Window Interactive Arena */}
         <section className="game-pane">
           {/* Top Activity Switcher Bar */}
@@ -809,17 +617,6 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
 
             {/* Quick Round Control Action */}
             <div className="arena-round-actions">
-              {/* Playlist Next Game Cycle */}
-              <motion.button
-                whileHover={{ scale: 1.03, y: -1 }}
-                whileTap={{ scale: 0.95 }}
-                className="btn-pill-secondary hover-lift playlist-next-btn"
-                style={{ padding: '5px 12px', fontSize: '0.78rem' }}
-                onClick={handleNextPlaylistGame}
-                title="Advance to next game in the campus lounge playlist"
-              >
-                ⏭️ Cycle Game
-              </motion.button>
               {gameState.type === 'scribble' && (
                 <motion.button
                   whileHover={{ scale: 1.03, y: -1 }}
@@ -869,20 +666,6 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
 
           {/* Active Activity Screen Area */}
           <div className="arena-stage-container">
-            {/* Active Spectator Notification Bar */}
-            {isSpectator && (
-              <div className="spectator-active-banner font-mono">
-                <span>👀 <strong>Spectator Mode Active</strong> — Watching round live. Chat & reactions enabled; player turns & buzzers paused.</span>
-                <button
-                  type="button"
-                  className="btn-spectator-rejoin"
-                  onClick={handleToggleSpectator}
-                >
-                  🎮 Rejoin as Player
-                </button>
-              </div>
-            )}
-
             <AnimatePresence mode="wait">
               {/* 1. Canvas & Scribble Screen */}
               {gameState.type === 'scribble' && (
@@ -1024,7 +807,7 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
                             whileTap={{ scale: 0.98 }}
                             className={btnClass}
                             onClick={() => handleTriviaAnswer(i)}
-                            disabled={isSpectator || gameState.selectedAnswerIdx !== null}
+                            disabled={gameState.selectedAnswerIdx !== null}
                           >
                             <span className="opt-letter">{['A', 'B', 'C', 'D'][i]}</span>
                             <span>{opt}</span>
@@ -1084,10 +867,9 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
                       <input
                         type="text"
                         className="wordchain-input-field"
-                        placeholder={isSpectator ? "👀 Spectator Mode: watching word chain..." : `Enter word starting with "${gameState.currentLetter || 'C'}"...`}
+                        placeholder={`Enter word starting with "${gameState.currentLetter || 'C'}"...`}
                         value={gameState.wordChainInput || ''}
                         onChange={(e) => setGameState(prev => ({ ...prev, wordChainInput: e.target.value }))}
-                        disabled={isSpectator}
                         autoFocus
                       />
                       <motion.button
@@ -1357,85 +1139,6 @@ function evaluateProximityCluster(candidates, radiusLimitMeters) {
           </form>
         </section>
       </main>
-
-      {/* Session Leaderboard Modal */}
-      <AnimatePresence>
-        {showLeaderboard && (
-          <motion.div
-            className="leaderboard-modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowLeaderboard(false)}
-          >
-            <motion.div
-              className="leaderboard-modal-card"
-              initial={{ scale: 0.92, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="leaderboard-modal-header">
-                <div className="leaderboard-title-group">
-                  <h3>🏆 Session Leaderboard</h3>
-                  <p className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                    Live scores across all {roomData.name || 'lounge'} mini-games
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="stealth-dismiss-btn"
-                  onClick={() => setShowLeaderboard(false)}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="leaderboard-list">
-                {sortedLeaderboard.length === 0 ? (
-                  <div className="font-mono text-muted" style={{ padding: '20px', textAlign: 'center', fontSize: '0.85rem' }}>
-                    No players active yet. Start a mini-game to score!
-                  </div>
-                ) : (
-                  sortedLeaderboard.map((user, idx) => {
-                    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
-                    const isMe = user.id === userProfile.id;
-                    return (
-                      <div
-                        key={user.id || idx}
-                        className={`leaderboard-item-row ${isMe ? 'is-me' : ''}`}
-                      >
-                        <div className="leaderboard-rank font-mono">{medal}</div>
-                        <div
-                          className="leaderboard-avatar"
-                          style={{ borderColor: user.color || 'var(--accent-lavender)' }}
-                        >
-                          {user.avatar || '👻'}
-                        </div>
-                        <div className="leaderboard-info">
-                          <span className="leaderboard-name font-bold">
-                            {user.name} {isMe && <span className="you-tag font-mono">(You)</span>}
-                          </span>
-                          {user.isSpectator && (
-                            <span className="spectator-tag font-mono">👀 Spectator</span>
-                          )}
-                        </div>
-                        <div className="leaderboard-score font-mono font-bold">
-                          {user.score || 0} pts
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <div className="leaderboard-footer font-mono" style={{ fontSize: '0.75rem' }}>
-                <span>⚡ Points accumulate dynamically across Scribble, Trivia, and Emoji Pop rounds.</span>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
