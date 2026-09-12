@@ -3,20 +3,40 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const allowedOrigins = [
+  'https://ycrxi75f.insforge.site',
+  'https://the-backrooms-1.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3001'
+];
+
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.insforge.site') || origin.endsWith('.onrender.com')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -1070,9 +1090,32 @@ io.on('connection', (socket) => {
   socket.on('disconnect', handleLeave);
 });
 
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'TheBackrooms Socket.io Backend',
+    activeRooms: rooms.size,
+    timestamp: new Date().toISOString()
+  });
+});
+
+const clientDist = path.join(__dirname, '../client/dist');
+const indexHtml = path.join(clientDist, 'index.html');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+}
+
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+  if (fs.existsSync(indexHtml)) {
+    res.sendFile(indexHtml);
+  } else {
+    res.json({
+      status: 'live',
+      service: 'TheBackrooms Socket.io Backend',
+      socketEndpoint: '/socket.io/',
+      activeRooms: rooms.size
+    });
+  }
 });
 
 httpServer.listen(PORT, () => {
