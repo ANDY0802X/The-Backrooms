@@ -84,9 +84,9 @@
 }
 
 [data-theme='dark'] .brand-icon-box {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.35);
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+  background: rgba(176, 0, 32, 0.2);
+  border-color: rgba(255, 59, 59, 0.35);
+  box-shadow: 0 4px 14px rgba(255, 59, 59, 0.25);
 }
 
 .brand-title {
@@ -121,9 +121,9 @@
   gap: 6px;
   padding: 6px 16px;
   border-radius: var(--radius-full);
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(139, 92, 246, 0.28);
-  color: #c4b5fd;
+  background: rgba(176, 0, 32, 0.15);
+  border: 1px solid var(--border-subtle);
+  color: var(--accent-hover);
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -131,9 +131,9 @@
 }
 
 [data-theme='light'] .backrooms-tag-pill {
-  background: rgba(139, 92, 246, 0.08);
-  border-color: rgba(139, 92, 246, 0.2);
-  color: #7c3aed;
+  background: rgba(163, 29, 36, 0.08);
+  border-color: rgba(163, 29, 36, 0.2);
+  color: var(--accent);
 }
 
 /* Big Hero Title */
@@ -257,8 +257,9 @@
 }
 
 .backrooms-shuffle-btn:hover {
-  background: rgba(139, 92, 246, 0.15);
+  background: var(--accent-glow);
   color: var(--text-primary);
+  border-color: var(--border-focus);
   transform: scale(1.1);
 }
 
@@ -299,8 +300,8 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid #f59e0b;
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+  border: 2px solid var(--accent-hover);
+  box-shadow: 0 0 16px var(--accent-glow);
   animation: ringRotate 8s linear infinite;
 }
 
@@ -311,8 +312,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #facc15;
-  box-shadow: 0 0 8px #facc15;
+  background: #ff7a00;
+  box-shadow: 0 0 10px #ff3b3b;
   transform: translateX(-50%);
 }
 
@@ -338,9 +339,9 @@
   width: 100%;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
+  background: var(--accent-gradient);
   border: none;
-  color: #0b0d14;
+  color: #ffffff;
   font-family: var(--font-main);
   font-size: 1.05rem;
   font-weight: 700;
@@ -349,14 +350,14 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 8px 24px var(--accent-glow);
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .backrooms-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(139, 92, 246, 0.45);
-  filter: brightness(1.05);
+  box-shadow: 0 12px 28px var(--accent-glow);
+  filter: brightness(1.08);
 }
 
 .backrooms-btn-primary .arrow-glyph {

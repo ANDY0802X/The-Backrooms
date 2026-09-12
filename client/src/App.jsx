@@ -47,7 +47,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'lobby' | 'room'
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('soulnook_theme') || 'light';
+    return localStorage.getItem('soulnook_theme') || 'dark';
   });
 
   const [userProfile, setUserProfile] = useState(() => {

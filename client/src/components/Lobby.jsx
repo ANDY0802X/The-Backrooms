@@ -149,7 +149,8 @@ export default function Lobby({
                 <input
                   type="text"
                   className="identity-name-input"
-                  value={userProfile?.name || 'Anonymous Roomie'}
+                  placeholder="Enter your alias..."
+                  value={userProfile?.name !== undefined ? userProfile.name : ''}
                   onChange={(e) => onUpdateUserProfile({ ...userProfile, name: e.target.value })}
                   title="Click to edit your alias"
                 />
