@@ -91,11 +91,17 @@ export default function Lobby({
     e.preventDefault();
     if (!newRoomName.trim()) return;
 
+    // Strict Geofence Validation: prevent any event/pin outside campus
+    if (!isWithinCampus(pinCoords.lat, pinCoords.lng)) {
+      sounds.playBoing();
+      alert('⛔ Strict Campus Rule: Lounges and pins can only be created inside the PDPM IIITDMJ campus grounds.');
+      return;
+    }
+
     sounds.playSuccess();
 
-    // Enforce campus coordinates
-    const safeLat = isWithinCampus(pinCoords.lat, pinCoords.lng) ? pinCoords.lat : CAMPUS_CENTER[0];
-    const safeLng = isWithinCampus(pinCoords.lat, pinCoords.lng) ? pinCoords.lng : CAMPUS_CENTER[1];
+    const safeLat = pinCoords.lat;
+    const safeLng = pinCoords.lng;
 
     if (activePinTab === 'room') {
       const roomPayload = {

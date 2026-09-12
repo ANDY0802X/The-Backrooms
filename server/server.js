@@ -1047,6 +1047,26 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Strict Campus Geofence Validation: strictly reject pins outside campus
+    const pinLat = Number(pinData.lat);
+    const pinLng = Number(pinData.lng);
+    if (
+      isNaN(pinLat) ||
+      isNaN(pinLng) ||
+      pinLat < 23.1670 ||
+      pinLat > 23.1835 ||
+      pinLng < 80.0135 ||
+      pinLng > 80.0355
+    ) {
+      if (typeof callback === 'function') {
+        callback({
+          success: false,
+          error: 'Strict Campus Rule: Events, lounges, and pins can only be created within PDPM IIITDMJ campus grounds.'
+        });
+      }
+      return;
+    }
+
     const pinId = `pin-${pinData.type}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     let linkedRoomId = pinData.roomId;
 
@@ -1135,21 +1155,6 @@ io.on('connection', (socket) => {
         }
       };
       rooms.set(linkedRoomId, newRoom);
-    }
-
-    // Clamp and enforce pin coordinates inside PDPM IIITDMJ Campus Bounds
-    let pinLat = Number(pinData.lat);
-    let pinLng = Number(pinData.lng);
-    if (
-      isNaN(pinLat) ||
-      isNaN(pinLng) ||
-      pinLat < 23.1670 ||
-      pinLat > 23.1840 ||
-      pinLng < 80.0130 ||
-      pinLng > 80.0360
-    ) {
-      pinLat = 23.1768;
-      pinLng = 80.0245;
     }
 
     const newPin = {
