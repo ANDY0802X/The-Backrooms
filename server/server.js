@@ -4,14 +4,47 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 
 const app = express();
-app.use(cors());
+
+const ALLOWED_ORIGINS = [
+  'https://ycrxi75f.insforge.site',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:4173'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      ALLOWED_ORIGINS.includes(origin) ||
+      origin.endsWith('.insforge.site') ||
+      origin.endsWith('.onrender.com') ||
+      origin.includes('localhost')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json());
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
+});
+
+app.get('/', (req, res) => {
+  res.send('🌌 TheBackrooms Socket.io backend is live and healthy!');
+});
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -1065,6 +1098,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', handleLeave);
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🌌 Soulnook Decompression Lounge server live on port ${PORT}`);
 });

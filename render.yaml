@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: the-backrooms-server
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
