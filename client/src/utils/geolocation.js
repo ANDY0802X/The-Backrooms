@@ -63,10 +63,22 @@ export const CAMPUS_PRESETS = [
     coords: { lat: 28.545000, lon: 77.192600 }
   },
   {
+    id: 'boba',
+    name: '🧋 Student Center Boba Cafe',
+    description: 'Indoor cafe tables (~22m from Library)',
+    coords: { lat: 28.545150, lon: 77.192720 }
+  },
+  {
     id: 'quad',
     name: '🌿 Student Union Quad',
     description: 'Benches outside cafe (~40m from Library)',
     coords: { lat: 28.545300, lon: 77.192850 }
+  },
+  {
+    id: 'gym',
+    name: '🏀 Recreation Center & Gym',
+    description: 'Campus sports complex (~68m from Library)',
+    coords: { lat: 28.545520, lon: 77.192250 }
   },
   {
     id: 'labs',
@@ -77,7 +89,7 @@ export const CAMPUS_PRESETS = [
   {
     id: 'dorms',
     name: '🏠 Dormitory Quad',
-    description: 'Student residence halls (~130m, slightly out of range)',
+    description: 'Student residence halls (~130m, outside 100m zone)',
     coords: { lat: 28.546050, lon: 77.193200 }
   },
   {

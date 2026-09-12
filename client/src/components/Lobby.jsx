@@ -54,6 +54,7 @@ export default function Lobby({
   const [newRoomTags, setNewRoomTags] = useState('');
   const [newRoomProximity, setNewRoomProximity] = useState(true);
   const [newRoomRadius, setNewRoomRadius] = useState(100);
+  const [newRoomIsPrivate, setNewRoomIsPrivate] = useState(false);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -94,6 +95,7 @@ export default function Lobby({
       tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean),
       isProximity: newRoomProximity,
       radius: newRoomRadius,
+      isPrivate: newRoomIsPrivate,
       coords
     });
 
@@ -102,6 +104,7 @@ export default function Lobby({
     setNewRoomCode('');
     setNewRoomDesc('');
     setNewRoomTags('');
+    setNewRoomIsPrivate(false);
   };
 
   const handleSearchKeyDown = (e) => {
@@ -560,17 +563,20 @@ export default function Lobby({
                         onChange={(e) => setNewRoomProximity(e.target.checked)}
                         className="proximity-checkbox"
                       />
-                      <span className="proximity-toggle-title">📍 Lock to ~100m Campus Proximity Zone</span>
+                      <span className="proximity-toggle-title">📍 Lock to Campus Proximity Zone</span>
                     </label>
                     {newRoomProximity && (
                       <select
                         className="modal-select-sm font-mono"
                         value={newRoomRadius}
                         onChange={(e) => setNewRoomRadius(Number(e.target.value))}
+                        title="Proximity zone limit"
                       >
-                        <option value={50}>50m (Same Floor)</option>
-                        <option value={100}>100m (Standard Zone)</option>
-                        <option value={200}>200m (Quad Sector)</option>
+                        <option value={25}>25m (Same Study Table)</option>
+                        <option value={50}>50m (Same Floor / Cafe)</option>
+                        <option value={100}>100m (Standard Lounge)</option>
+                        <option value={250}>250m (Quad Sector)</option>
+                        <option value={500}>500m (Campus Wide)</option>
                       </select>
                     )}
                   </div>
@@ -578,6 +584,26 @@ export default function Lobby({
                     {newRoomProximity
                       ? `🔒 Only students physically within ~${newRoomRadius}m of your current GPS anchor can discover or join. Coordinates are NEVER saved or broadcast.`
                       : `🔓 Open worldwide. Anyone with the code or browsing the lobby can join.`}
+                  </p>
+                </div>
+
+                {/* Friend-Created Private Session Toggle */}
+                <div className="modal-field proximity-toggle-field" style={{ marginTop: '2px' }}>
+                  <div className="proximity-toggle-header">
+                    <label className="proximity-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={newRoomIsPrivate}
+                        onChange={(e) => setNewRoomIsPrivate(e.target.checked)}
+                        className="proximity-checkbox"
+                      />
+                      <span className="proximity-toggle-title">🔒 Hidden Private Session (Direct #Code Only)</span>
+                    </label>
+                  </div>
+                  <p className="proximity-note font-mono">
+                    {newRoomIsPrivate
+                      ? `🤫 This lounge will be hidden from the public lobby. Only friends who enter #${newRoomCode || 'CODE'} can join.`
+                      : `🌐 Listed in public lobby for students to discover.`}
                   </p>
                 </div>
 

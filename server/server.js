@@ -293,6 +293,7 @@ const proximityCandidates = new Map();
 const pendingMatches = new Map();
 
 function formatRoomForLobby(room) {
+  if (room.isPrivate) return null; // Friend-created private session hidden from public lobby!
   return {
     id: room.id,
     code: room.code || (room.id.startsWith('lounge-') ? room.id.replace('lounge-', '').slice(0, 6).toUpperCase() : room.id.slice(0, 6).toUpperCase()),
@@ -310,13 +311,17 @@ function formatRoomForLobby(room) {
   };
 }
 
+function getLobbyRooms() {
+  return Array.from(rooms.values()).map(formatRoomForLobby).filter(Boolean);
+}
+
 // REST Endpoints
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', activeRooms: rooms.size, timestamp: Date.now() });
 });
 
 app.get('/api/rooms', (req, res) => {
-  res.json(Array.from(rooms.values()).map(formatRoomForLobby));
+  res.json(getLobbyRooms());
 });
 
 // ==========================================
@@ -335,7 +340,8 @@ function startScribbleGame(roomId) {
   const room = rooms.get(roomId);
   if (!room || room.users.size === 0) return;
 
-  const userList = Array.from(room.users.values());
+  const eligibleUsers = Array.from(room.users.values()).filter(u => !u.isSpectator);
+  const userList = eligibleUsers.length > 0 ? eligibleUsers : Array.from(room.users.values());
   const nextDrawer = userList[Math.floor(Math.random() * userList.length)];
   const randomWord = CAMPUS_WORDS[Math.floor(Math.random() * CAMPUS_WORDS.length)];
   const maskedWord = randomWord.replace(/[a-zA-Z]/g, '_ ');
@@ -755,7 +761,7 @@ io.on('connection', (socket) => {
     return false;
   };
 
-  socket.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+  socket.emit('rooms_update', getLobbyRooms());
 
   // Create Room
   socket.on('create_room', (roomData, callback) => {
@@ -771,6 +777,7 @@ io.on('connection', (socket) => {
     const roomCode = (roomData.code || roomId.replace('lounge-', '').slice(0, 6)).toUpperCase();
 
     const isProximity = !!roomData.isProximity;
+    const isPrivate = !!roomData.isPrivate;
     const radius = Number(roomData.radius) || 100;
     
     // Validate GPS coordinate bounds (-90 to 90 lat, -180 to 180 lon)
@@ -795,6 +802,7 @@ io.on('connection', (socket) => {
       created: Date.now(),
       isPermanent: false,
       isProximity,
+      isPrivate,
       radius,
       anchorCoords, // Kept strictly private in server memory!
       users: new Map(),
@@ -822,7 +830,7 @@ io.on('connection', (socket) => {
     };
 
     rooms.set(roomId, newRoom);
-    io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+    io.emit('rooms_update', getLobbyRooms());
 
     if (typeof callback === 'function') {
       callback({ success: true, roomId, code: roomCode });
@@ -907,7 +915,7 @@ io.on('connection', (socket) => {
         }
       };
       rooms.set(newRoomId, targetRoom);
-      io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+      io.emit('rooms_update', getLobbyRooms());
     }
 
     // Validate proximity if room is proximity-locked
@@ -983,6 +991,7 @@ io.on('connection', (socket) => {
     currentRoomId = roomId;
     currentUser = {
       ...user,
+      isSpectator: !!user?.isSpectator,
       socketId: socket.id,
       joinedAt: Date.now()
     };
@@ -1040,7 +1049,7 @@ io.on('connection', (socket) => {
     room.messages.push(welcomeMsg);
     io.to(roomId).emit('new_message', welcomeMsg);
 
-    io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+    io.emit('rooms_update', getLobbyRooms());
   });
 
   // Canvas
@@ -1240,6 +1249,20 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Phase 10: Spectator Mode Toggle
+  socket.on('toggle_spectator', ({ isSpectator }) => {
+    if (!currentRoomId || !currentUser) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.users.has(socket.id)) return;
+    const u = room.users.get(socket.id);
+    if (u) {
+      u.isSpectator = !!isSpectator;
+      io.to(currentRoomId).emit('active_users_update', {
+        activeUsers: Array.from(room.users.values())
+      });
+    }
+  });
+
   const handleLeave = () => {
     if (currentRoomId) {
       const room = rooms.get(currentRoomId);
@@ -1266,7 +1289,7 @@ io.on('connection', (socket) => {
               checkRoom.anchorCoords = null;
               checkRoom.game = null;
               rooms.delete(currentRoomId);
-              io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+              io.emit('rooms_update', getLobbyRooms());
             }
           }, 30000);
         } else if (room.isPermanent && room.users.size === 0) {
@@ -1278,7 +1301,7 @@ io.on('connection', (socket) => {
         }
       }
 
-      io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+      io.emit('rooms_update', getLobbyRooms());
       currentRoomId = null;
       proximityCandidates.delete(socket.id);
     }
@@ -1398,7 +1421,7 @@ io.on('connection', (socket) => {
       };
       rooms.set(newRoomId, newRoom);
       match.roomId = newRoomId;
-      io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+      io.emit('rooms_update', getLobbyRooms());
     }
 
     proximityCandidates.delete(socket.id);

@@ -200,22 +200,20 @@ For each game:
 
 ---
 
-# ⚪ Phase 10 — Future Ideas
-
-These are intentionally NOT part of the current implementation.
+# ⚪ Phase 10 — Future Ideas & Extended Deliverables
 
 * [x] ~~QR-based physical verification~~ (Removed by user decision; relying on zero-knowledge GPS & room codes).
-* [ ] Bluetooth/local-network proximity verification.
-* [ ] NFC-based room joining.
-* [ ] More multiplayer mini-games.
+* [ ] Bluetooth/local-network proximity verification (Explored for native PWA/shell wrap).
+* [ ] NFC-based room joining (Explored for Web NFC on compatible Android hardware).
+* [ ] More multiplayer mini-games (5 complete decompression games currently active).
 * [ ] Team-based games.
-* [ ] Spectator mode.
+* [x] Spectator mode (Toggleable passive viewing, drawer exclusion in Scribble, spectator badges & disabled buzzers).
 * [ ] Temporary tournaments.
-* [ ] Campus-specific game zones.
-* [ ] Custom proximity radius.
-* [ ] Friend-created private sessions.
-* [ ] Game playlists.
-* [ ] Temporary leaderboards.
+* [x] Campus-specific game zones (Library, Boba Cafe, Quad, Gym, Tech Labs, Dorms, Metro presets).
+* [x] Custom proximity radius (25m study table, 50m floor, 100m lounge, 250m quad, 500m campus-wide).
+* [x] Friend-created private sessions (Hidden from public lobby, joinable directly via exact #CODE).
+* [x] Game playlists (1-click cycle button across Scribble, Trivia, Word Chain, Emoji Pop, Truth & Vent).
+* [x] Temporary leaderboards (In-memory session rankings, medals 🥇🥈🥉, live accumulated score tracker).
 
 ---
 
@@ -245,30 +243,31 @@ UI/UX                 ██████████  100% (Tactile Radar HUD, M
 Games                 ██████████  100% (5 Multiplayer Games Synced)
 Privacy/Cleanup       ██████████  100% (Ephemeral RAM State, Zero DB Records, Deep Purge)
 Security              ██████████  100% (Server-Side Distance Verification, Rate Limits, Quorum Guards)
+Phase 10 Extensions   ██████████  100% (Custom Radii, Private Lounges, Spectators, Leaderboards, Playlists)
 ```
 
 ## 🚧 Current Milestone
 
-**All Core Roadmap Milestones (Phase 1–9) Fully Completed! [x]**
+**All Roadmap Phases & Extended Deliverables Fully Built and Deployed! [x]**
 
 Progress:
 
 ```text
 [x] GPS
  ↓
-[x] 100m proximity validation
+[x] Proximity validation & custom radii
  ↓
-[x] Proximity room creation
+[x] Proximity room creation & private sessions
  ↓
 [x] Anonymous nearby-player discovery
  ↓
-[x] 5–6 player game matching
+[x] 2–6 player game matching & radar alerts
  ↓
-[x] Notifications
+[x] Multiplayer game sync & playlists
  ↓
-[x] Multiplayer game sync
+[x] UI polish, mobile touch refinement, & stealth panic screen
  ↓
-[x] UI polish & mobile touch refinement
+[x] Spectator mode & session leaderboards
  ↓
 [x] Security + privacy hardening
 ```
