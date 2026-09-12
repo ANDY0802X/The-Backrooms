@@ -14,11 +14,38 @@ const NOUNS = [
   'Caffeine Alchemist', 'Stargazer', 'Existentialist', 'Wanderer'
 ];
 
-export const AVATARS = [
-  '😴', '🐱', '🦊', '🐼', '🐨', '🐸', '🦉', '🐙', '🦄', '🦦',
-  '☕', '🎨', '🌙', '🌌', '⚡', '🌿', '🔮', '🧸', '🎧', '🪐',
-  '🧁', '🧩', '🚀', '🪄', '🌸', '🏮', '🔥', '🌊', '👻', '👾'
+export const DICEBEAR_STYLES = ['notionists', 'micah', 'shapes', 'bottts-neutral'];
+export const DEFAULT_AVATAR_STYLE = 'notionists';
+
+export const CURATED_SEEDS = [
+  'gentle-cat', 'midnight-owl', 'zen-hermit', 'coffee-sketcher',
+  'astro-student', 'cozy-fox', 'dorm-dreamer', 'neon-wanderer',
+  'quiet-bot', 'moon-stargazer', 'caffeine-alchemist', 'paper-plane',
+  'sleepy-panda', 'cyber-philosopher', 'pixel-artist', 'math-mystic',
+  'campus-ghost', 'boba-runner', 'velvet-poet', 'synth-waver',
+  'chilly-otter', 'lofi-listener', 'chai-connoisseur', 'solitary-cloud'
 ];
+
+export function getDiceBearAvatarUrl(seed, style = DEFAULT_AVATAR_STYLE) {
+  const cleanSeed = encodeURIComponent(String(seed || 'student').trim());
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${cleanSeed}&backgroundColor=transparent`;
+}
+
+export function cycleAvatarSeed(currentSeed, direction = 1, style = DEFAULT_AVATAR_STYLE) {
+  let idx = CURATED_SEEDS.indexOf(currentSeed);
+  if (idx === -1) {
+    idx = 0;
+  }
+  const nextIdx = (idx + direction + CURATED_SEEDS.length) % CURATED_SEEDS.length;
+  const nextSeed = CURATED_SEEDS[nextIdx];
+  return {
+    seed: nextSeed,
+    avatar: getDiceBearAvatarUrl(nextSeed, style),
+    index: nextIdx
+  };
+}
+
+export const AVATARS = CURATED_SEEDS;
 
 const ACCENT_COLORS = [
   '#8b5cf6', // Electric Violet
@@ -44,10 +71,12 @@ const CAMPUS_MOODS = [
   'Decompressing after a brutal lab 🧪'
 ];
 
-export function generateAnonymousIdentity() {
+export function generateAnonymousIdentity(style = DEFAULT_AVATAR_STYLE) {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  const seedIdx = Math.floor(Math.random() * CURATED_SEEDS.length);
+  const seed = CURATED_SEEDS[seedIdx];
+  const avatar = getDiceBearAvatarUrl(seed, style);
   const color = ACCENT_COLORS[Math.floor(Math.random() * ACCENT_COLORS.length)];
   const mood = CAMPUS_MOODS[Math.floor(Math.random() * CAMPUS_MOODS.length)];
   const id = `anon-${Math.random().toString(36).substr(2, 9)}`;
@@ -56,7 +85,11 @@ export function generateAnonymousIdentity() {
     id,
     name: `${adj} ${noun}`,
     avatar,
+    avatarSeed: seed,
+    avatarIndex: seedIdx,
+    avatarStyle: style,
     color,
     mood
   };
 }
+

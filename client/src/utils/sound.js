@@ -130,6 +130,11 @@ class SoundEngine {
     });
   }
 
+  // Soft Warm Lounge Entrance Chime
+  playJoinChime() {
+    this.playChime();
+  }
+
   // High Score / Game Victory Fanfare
   playSuccess() {
     if (this.isMuted) return;

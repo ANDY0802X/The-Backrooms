@@ -46,17 +46,21 @@ export default function Lobby({
   const [isPlacingPin, setIsPlacingPin] = useState(false);
   const [pinCoords, setPinCoords] = useState({ lat: 23.17504, lng: 80.02921 });
   const [activePinTab, setActivePinTab] = useState('room'); // 'room' | 'marketplace' | 'lostfound'
-  const [activeLostFoundPinId, setActiveLostFoundPinId] = useState(null);
-  const [activeTradePinId, setActiveTradePinId] = useState(null);
+  const [activeLostFoundPin, setActiveLostFoundPin] = useState(null);
+  const [activeTradePin, setActiveTradePin] = useState(null);
 
   // Reactively derive active pins from pins prop to ensure instant live comment updates
   const currentLostFoundPin = useMemo(() => {
-    return pins.find(p => p.id === activeLostFoundPinId) || null;
-  }, [pins, activeLostFoundPinId]);
+    if (!activeLostFoundPin) return null;
+    const targetId = activeLostFoundPin.id || activeLostFoundPin;
+    return pins.find(p => p.id === targetId) || (typeof activeLostFoundPin === 'object' ? activeLostFoundPin : null);
+  }, [pins, activeLostFoundPin]);
 
   const currentTradePin = useMemo(() => {
-    return pins.find(p => p.id === activeTradePinId) || null;
-  }, [pins, activeTradePinId]);
+    if (!activeTradePin) return null;
+    const targetId = activeTradePin.id || activeTradePin;
+    return pins.find(p => p.id === targetId) || (typeof activeTradePin === 'object' ? activeTradePin : null);
+  }, [pins, activeTradePin]);
 
   // New room/pin modal state
   const [newRoomName, setNewRoomName] = useState('');
@@ -256,26 +260,16 @@ export default function Lobby({
         </div>
       </header>
 
-      {/* Animated Intro / Tagline Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="lobby-animated-tagline"
-      >
-        <span className="tagline-pulse-pip"></span>
-        <span className="tagline-text">
-          <strong>No login. No logs.</strong> Ephemeral chats vanish in 12s.
-        </span>
-        <span className="tagline-badge">Zero-Trace</span>
-      </motion.div>
-
       {/* Identity Card */}
       <Reveal index={0}>
         <section className="identity-banner glass-panel hover-lift" style={{ '--user-color': userProfile?.color || '#ff3b3b' }}>
           <div className="identity-info">
             <div className="identity-avatar-box">
-              <span>{userProfile?.avatar || '🐱'}</span>
+              {userProfile?.avatar && userProfile.avatar.startsWith('http') ? (
+                <img src={userProfile.avatar} alt="Avatar" className="identity-avatar-img" />
+              ) : (
+                <span>{userProfile?.avatar || '🐱'}</span>
+              )}
               <span className="identity-avatar-badge"></span>
             </div>
 
@@ -425,12 +419,13 @@ export default function Lobby({
               if (roomId) onJoinRoom(roomId);
             }}
             onOpenMarketplace={(pin) => {
-              setActiveTradePinId(pin?.id || pin);
+              setActiveTradePin(pin);
             }}
             onOpenLostFound={(pin) => {
-              setActiveLostFoundPinId(pin?.id || pin);
+              setActiveLostFoundPin(pin);
             }}
             isPlacingPin={isPlacingPin}
+            onStartPlacingPin={() => setIsPlacingPin(true)}
             onCancelPlacingPin={() => setIsPlacingPin(false)}
             onMapClickToPlace={(coords) => {
               setPinCoords(coords);
@@ -468,7 +463,7 @@ export default function Lobby({
                   </div>
 
                   <div className="room-code-badge-row">
-                    <span className="room-code-display">Code: #{roomCode}</span>
+                    <span className="room-code-display">Code: {roomCode}</span>
                     <motion.button
                       whileHover={{ scale: 1.08 }}
                       whileTap={{ scale: 0.92 }}
@@ -488,14 +483,6 @@ export default function Lobby({
                     <h3 className="room-card-title">{room.name}</h3>
                     <p className="room-card-desc">{room.description}</p>
                   </div>
-
-                  {room.tags && room.tags.length > 0 && (
-                    <div className="room-tag-pills">
-                      {room.tags.map((tag, i) => (
-                        <span key={i} className="room-tag hover-lift">#{tag}</span>
-                      ))}
-                    </div>
-                  )}
 
                   <div className="room-card-footer">
                     <motion.button
@@ -844,28 +831,34 @@ export default function Lobby({
       </AnimatePresence>
 
       {/* Lost & Found Comments Modal */}
-      {currentLostFoundPin && (
-        <LostFoundModal
-          pin={currentLostFoundPin}
-          userProfile={userProfile}
-          theme={theme}
-          onClose={() => setActiveLostFoundPinId(null)}
-          onAddComment={onAddLostFoundComment}
-          onResolve={onUpdatePin}
-        />
-      )}
+      <AnimatePresence>
+        {currentLostFoundPin && (
+          <LostFoundModal
+            key={currentLostFoundPin.id || 'lf-modal'}
+            pin={currentLostFoundPin}
+            userProfile={userProfile}
+            theme={theme}
+            onClose={() => setActiveLostFoundPin(null)}
+            onAddComment={onAddLostFoundComment}
+            onResolve={onUpdatePin}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Campus Marketplace & Trade Comments Modal */}
-      {currentTradePin && (
-        <TradeModal
-          pin={currentTradePin}
-          userProfile={userProfile}
-          theme={theme}
-          onClose={() => setActiveTradePinId(null)}
-          onAddComment={onAddTradeComment}
-          onJoinRoom={onJoinRoom}
-        />
-      )}
+      <AnimatePresence>
+        {currentTradePin && (
+          <TradeModal
+            key={currentTradePin.id || 'trade-modal'}
+            pin={currentTradePin}
+            userProfile={userProfile}
+            theme={theme}
+            onClose={() => setActiveTradePin(null)}
+            onAddComment={onAddTradeComment}
+            onJoinRoom={onJoinRoom}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

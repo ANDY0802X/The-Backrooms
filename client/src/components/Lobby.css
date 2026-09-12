@@ -58,6 +58,14 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 2px solid var(--user-color, var(--accent));
   position: relative;
+  overflow: hidden;
+}
+
+.identity-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .identity-avatar-badge {
@@ -157,7 +165,7 @@
 }
 
 .search-input:focus {
-  border-color: var(--accent-violet);
+  border-color: var(--border-focus);
   background: var(--bg-surface-elevated);
 }
 
@@ -424,7 +432,7 @@
 }
 
 .modal-input:focus, .modal-textarea:focus, .modal-select:focus {
-  border-color: var(--accent-violet);
+  border-color: var(--border-focus);
 }
 
 .modal-footer {

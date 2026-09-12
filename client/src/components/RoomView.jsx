@@ -76,6 +76,13 @@ export default function RoomView({
     targets: []
   });
 
+  // Live Poll State
+  const [currentPoll, setCurrentPoll] = useState(null);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+  const [isPollMinimized, setIsPollMinimized] = useState(false);
+  const [newPollQuestion, setNewPollQuestion] = useState('');
+  const [newPollOptions, setNewPollOptions] = useState(['', '']);
+
   // Canvas refs
   const canvasRef = useRef(null);
   const [brushColor, setBrushColor] = useState('#8b5cf6');
@@ -132,6 +139,7 @@ export default function RoomView({
     socket.on('room_joined_data', (data) => {
       if (data.room) setRoomData(data.room);
       if (data.activeUsers) setActiveUsers(data.activeUsers);
+      if (data.currentPoll !== undefined) setCurrentPoll(data.currentPoll);
       if (data.recentMessages) {
         setMessages(data.recentMessages);
         // Schedule auto-dissolve for existing ephemeral messages
@@ -279,6 +287,10 @@ export default function RoomView({
       triggerReactionParticle('💥');
     });
 
+    socket.on('poll_updated', ({ poll }) => {
+      setCurrentPoll(poll);
+    });
+
     return () => {
       socket.off('room_joined_data');
       socket.off('user_joined');
@@ -299,6 +311,7 @@ export default function RoomView({
       socket.off('word_chain_update');
       socket.off('emoji_targets_respawn');
       socket.off('emoji_target_popped');
+      socket.off('poll_updated');
       socket.emit('leave_room', { roomId });
     };
   }, [socket, roomId, userProfile]);
@@ -534,6 +547,48 @@ export default function RoomView({
     setGameState(prev => ({ ...prev, wordChainInput: '' }));
   };
 
+  const handleCreatePollSubmit = (e) => {
+    e.preventDefault();
+    if (!socket || !newPollQuestion.trim()) return;
+
+    const validOptions = newPollOptions.map(o => o.trim()).filter(Boolean);
+    if (validOptions.length < 2) return;
+
+    sounds.playSuccess();
+    socket.emit('create_poll', {
+      roomId,
+      question: newPollQuestion.trim(),
+      options: validOptions
+    }, (res) => {
+      if (res?.success) {
+        setIsPollModalOpen(false);
+        setIsPollMinimized(false);
+        setNewPollQuestion('');
+        setNewPollOptions(['', '']);
+      }
+    });
+  };
+
+  const handleVotePollOption = (optionId) => {
+    if (!socket || !currentPoll || !currentPoll.isOpen) return;
+    sounds.playPop();
+    socket.emit('vote_poll', {
+      roomId,
+      pollId: currentPoll.id,
+      optionId,
+      voterId: userProfile?.id || userProfile?.name
+    });
+  };
+
+  const handleClosePoll = () => {
+    if (!socket || !currentPoll) return;
+    sounds.playBoing();
+    socket.emit('close_poll', {
+      roomId,
+      pollId: currentPoll.id
+    });
+  };
+
   const displayRoomCode = roomData.code || roomId.replace('lounge-', '').slice(0, 6).toUpperCase();
 
   return (
@@ -575,6 +630,26 @@ export default function RoomView({
             <span>Code: #{displayRoomCode}</span>
             <span style={{ fontSize: '0.75rem' }}>{copiedCode ? '✓ Copied' : '📋'}</span>
           </motion.div>
+
+          {/* Room Poll Header Trigger */}
+          <motion.button
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            className="btn-pill-secondary hover-lift"
+            style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => {
+              sounds.playPop();
+              if (currentPoll) {
+                setIsPollMinimized(false);
+              } else {
+                setIsPollModalOpen(true);
+              }
+            }}
+            title="Room Poll"
+          >
+            <span>📊</span>
+            <span>{currentPoll ? (currentPoll.isOpen ? 'Poll Active' : 'Poll Results') : 'Poll'}</span>
+          </motion.button>
         </div>
 
         <div className="room-header-center">
@@ -622,7 +697,11 @@ export default function RoomView({
                 style={{ borderColor: u.color || 'var(--accent-lavender)' }}
                 title={u.name}
               >
-                {u.avatar || '😴'}
+                {u.avatar && u.avatar.startsWith('http') ? (
+                  <img src={u.avatar} alt={u.name} className="presence-avatar-img" />
+                ) : (
+                  <span>{u.avatar || '😴'}</span>
+                )}
               </motion.div>
             ))}
           </div>
@@ -1104,10 +1183,131 @@ export default function RoomView({
               <span className="pulsing-ping-dot"></span>
               <span style={{ fontSize: '0.88rem', fontWeight: 700 }}>Real-Time Vent Feed</span>
             </div>
-            <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-sage)' }}>
-              🔒 Zero-Trace Chat
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className="room-poll-header-pill-btn"
+                onClick={() => {
+                  sounds.playPop();
+                  if (currentPoll) {
+                    setIsPollMinimized(prev => !prev);
+                  } else {
+                    setIsPollModalOpen(true);
+                  }
+                }}
+                title={currentPoll ? 'Toggle Room Poll' : 'Create a Room Poll'}
+              >
+                <span>📊</span>
+                <span>{currentPoll ? (currentPoll.isOpen ? 'Live Poll' : 'Poll Closed') : '+ Poll'}</span>
+              </button>
+              <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-sage)' }}>
+                🔒 Zero-Trace Chat
+              </span>
+            </div>
           </div>
+
+          {/* Active Poll Widget in Chat Pane */}
+          <AnimatePresence>
+            {currentPoll && (
+              <motion.div
+                className={`room-active-poll-card ${!currentPoll.isOpen ? 'poll-closed' : ''}`}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.24 }}
+              >
+                <div className="poll-card-top-strip">
+                  <div className="poll-card-badge-row">
+                    <span className={`poll-status-chip ${currentPoll.isOpen ? 'chip-live' : 'chip-ended'}`}>
+                      {currentPoll.isOpen ? '🔴 LIVE POLL' : '✓ CONCLUDED'}
+                    </span>
+                    <span className="poll-creator-credit">By {currentPoll.createdBy || 'Student'}</span>
+                  </div>
+                  <div className="poll-header-actions">
+                    <button
+                      type="button"
+                      className="poll-action-icon-btn"
+                      onClick={() => setIsPollMinimized(prev => !prev)}
+                      title={isPollMinimized ? 'Expand Poll' : 'Minimize Poll'}
+                    >
+                      {isPollMinimized ? '▼' : '▲'}
+                    </button>
+                    {currentPoll.isOpen ? (
+                      <button
+                        type="button"
+                        className="poll-end-btn"
+                        onClick={handleClosePoll}
+                        title="End this poll"
+                      >
+                        End
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="poll-new-trigger-btn"
+                        onClick={() => setIsPollModalOpen(true)}
+                        title="Start a new poll"
+                      >
+                        + New
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {!isPollMinimized && (
+                  <div className="poll-card-content-area">
+                    <h4 className="poll-question-text">{currentPoll.question}</h4>
+
+                    <div className="poll-options-list">
+                      {(() => {
+                        const totalVotes = currentPoll.options.reduce((sum, o) => sum + (o.votes || 0), 0);
+                        const myVoterId = userProfile?.id || userProfile?.name;
+
+                        return currentPoll.options.map((opt) => {
+                          const hasVoted = opt.voterIds && opt.voterIds.includes(myVoterId);
+                          const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              className={`poll-option-row ${hasVoted ? 'voted-option' : ''} ${!currentPoll.isOpen ? 'disabled-voting' : ''}`}
+                              onClick={() => {
+                                if (currentPoll.isOpen) handleVotePollOption(opt.id);
+                              }}
+                              disabled={!currentPoll.isOpen}
+                              title={currentPoll.isOpen ? (hasVoted ? 'Your current vote (click another to switch)' : 'Click to vote') : 'Poll closed'}
+                            >
+                              <div className="poll-option-fill-bar" style={{ width: `${pct}%` }} />
+                              <div className="poll-option-content">
+                                <span className="poll-option-text">
+                                  {hasVoted && <span className="poll-check-mark">✓ </span>}
+                                  {opt.text}
+                                </span>
+                                <span className="poll-option-stats">
+                                  <strong className="poll-pct">{pct}%</strong>
+                                  <span className="poll-count">({opt.votes || 0})</span>
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+
+                    <div className="poll-card-footer">
+                      <span className="poll-total-votes">
+                        {currentPoll.options.reduce((sum, o) => sum + (o.votes || 0), 0)} total vote{currentPoll.options.reduce((sum, o) => sum + (o.votes || 0), 0) === 1 ? '' : 's'}
+                      </span>
+                      {currentPoll.isOpen && (
+                        <span className="poll-hint-tap">Click any option to vote</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Messages Feed (fully scrollable, zero interference with input form) */}
           <div className="chat-messages-container" ref={chatScrollContainerRef} onScroll={handleChatScroll}>
@@ -1140,8 +1340,13 @@ export default function RoomView({
                     className={`chat-bubble ${isOwn ? 'own' : 'other'} ${m.isEphemeral ? 'ephemeral-dissolve-bubble' : ''} hover-lift`}
                   >
                     <div className="chat-bubble-meta">
-                      <span style={{ color: m.sender?.color || 'var(--accent-lavender)', fontWeight: 700 }}>
-                        {m.sender?.avatar || '😴'} {m.sender?.name || 'Anonymous'}
+                      <span style={{ color: m.sender?.color || 'var(--text-primary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        {m.sender?.avatar && m.sender.avatar.startsWith('http') ? (
+                          <img src={m.sender.avatar} alt="" className="chat-avatar-inline" />
+                        ) : (
+                          <span>{m.sender?.avatar || '😴'}</span>
+                        )}
+                        <span>{m.sender?.name || 'Anonymous'}</span>
                       </span>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
                         {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1213,6 +1418,121 @@ export default function RoomView({
           </form>
         </section>
       </main>
+
+      {/* Create Poll Modal */}
+      <AnimatePresence>
+        {isPollModalOpen && (
+          <motion.div
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsPollModalOpen(false)}
+          >
+            <motion.div
+              className="modal-card"
+              initial={{ opacity: 0, scale: 0.94, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3 className="modal-title">📊 Create Room Poll</h3>
+                <button
+                  type="button"
+                  className="btn-pill-icon"
+                  onClick={() => setIsPollModalOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleCreatePollSubmit}>
+                <div className="modal-form-group">
+                  <label className="modal-label">Question / Topic *</label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    placeholder="e.g. Coffee run to Nescafe or Bubble tea?"
+                    value={newPollQuestion}
+                    onChange={(e) => setNewPollQuestion(e.target.value)}
+                    required
+                    autoFocus
+                    maxLength={120}
+                  />
+                </div>
+
+                <div className="modal-form-group">
+                  <label className="modal-label">Poll Choices (2-5 options)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {newPollOptions.map((opt, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          className="modal-input"
+                          placeholder={`Option ${idx + 1}`}
+                          value={opt}
+                          onChange={(e) => {
+                            const updated = [...newPollOptions];
+                            updated[idx] = e.target.value;
+                            setNewPollOptions(updated);
+                          }}
+                          required={idx < 2}
+                          maxLength={60}
+                        />
+                        {newPollOptions.length > 2 && (
+                          <button
+                            type="button"
+                            className="btn-pill-secondary"
+                            style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444' }}
+                            onClick={() => {
+                              setNewPollOptions(newPollOptions.filter((_, i) => i !== idx));
+                            }}
+                            title="Remove option"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {newPollOptions.length < 5 && (
+                    <button
+                      type="button"
+                      className="btn-pill-secondary"
+                      style={{ marginTop: '10px', width: '100%', justifyContent: 'center', padding: '6px 12px', fontSize: '0.78rem' }}
+                      onClick={() => {
+                        sounds.playPop();
+                        setNewPollOptions([...newPollOptions, '']);
+                      }}
+                    >
+                      + Add Option
+                    </button>
+                  )}
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: '18px' }}>
+                  <button
+                    type="button"
+                    className="btn-pill-secondary"
+                    onClick={() => setIsPollModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-pill-primary"
+                  >
+                    Launch Live Poll ➔
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

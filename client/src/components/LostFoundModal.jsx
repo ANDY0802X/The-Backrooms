@@ -48,14 +48,13 @@ export default function LostFoundModal({
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className="lf-modal-overlay"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
+    <motion.div
+      className="lf-modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
         <motion.div
           className="lf-modal-card"
           data-theme={theme}
@@ -95,7 +94,11 @@ export default function LostFoundModal({
             <div className="lf-post-author-row">
               <span>Reported by</span>
               <span className="lf-author-pill">
-                <span>{pin.createdBy?.avatar || '👤'}</span>
+                {pin.createdBy?.avatar && pin.createdBy.avatar.startsWith('http') ? (
+                  <img src={pin.createdBy.avatar} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <span>{pin.createdBy?.avatar || '👤'}</span>
+                )}
                 <span>{pin.createdBy?.name || 'Anonymous Student'}</span>
               </span>
             </div>
@@ -130,9 +133,13 @@ export default function LostFoundModal({
                 comments.map((c, idx) => (
                   <div key={c.id || idx} className="lf-comment-item">
                     <div className="lf-comment-header">
-                      <span className="lf-comment-author">
-                        <span>{c.author?.avatar || '💬'}</span>
-                        <span style={{ color: c.author?.color || '#e2e8f0' }}>
+                      <span className="lf-comment-author" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {c.author?.avatar && c.author.avatar.startsWith('http') ? (
+                          <img src={c.author.avatar} alt="" style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <span>{c.author?.avatar || '💬'}</span>
+                        )}
+                        <span style={{ color: theme === 'light' ? 'var(--text-primary)' : (c.author?.color || '#e2e8f0'), fontWeight: 700 }}>
                           {c.author?.name || 'Student'}
                         </span>
                       </span>
@@ -166,6 +173,5 @@ export default function LostFoundModal({
           </form>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
   );
 }

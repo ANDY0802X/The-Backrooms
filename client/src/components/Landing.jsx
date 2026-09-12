@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Landing.css';
 import { sounds } from '../utils/sound';
-import { AVATARS, generateAnonymousIdentity } from '../utils/identity';
+import { AVATARS, generateAnonymousIdentity, cycleAvatarSeed, getDiceBearAvatarUrl, DEFAULT_AVATAR_STYLE } from '../utils/identity';
 import Reveal from './Reveal';
 
 export default function Landing({
@@ -27,24 +27,37 @@ export default function Landing({
   });
 
   const displayName = userProfile?.name !== undefined ? userProfile.name : '';
-  const currentAvatar = userProfile?.avatar || '😴';
+  const currentAvatar = userProfile?.avatar;
+  const currentSeed = userProfile?.avatarSeed || userProfile?.name || 'gentle-cat';
+  const avatarStyle = userProfile?.avatarStyle || DEFAULT_AVATAR_STYLE;
+  const avatarUrl = (currentAvatar && currentAvatar.startsWith('http'))
+    ? currentAvatar
+    : getDiceBearAvatarUrl(currentSeed, avatarStyle);
 
-  // Cycle avatar left / right
+  // Cycle avatar left / right with smooth deterministic seed stepping
   const handlePrevAvatar = () => {
     sounds.playPop();
-    const idx = AVATARS.indexOf(currentAvatar);
-    const newIdx = idx <= 0 ? AVATARS.length - 1 : idx - 1;
+    const result = cycleAvatarSeed(currentSeed, -1, avatarStyle);
     if (typeof onUpdateUserProfile === 'function') {
-      onUpdateUserProfile({ ...userProfile, avatar: AVATARS[newIdx] });
+      onUpdateUserProfile({
+        ...userProfile,
+        avatar: result.avatar,
+        avatarSeed: result.seed,
+        avatarIndex: result.index
+      });
     }
   };
 
   const handleNextAvatar = () => {
     sounds.playPop();
-    const idx = AVATARS.indexOf(currentAvatar);
-    const newIdx = idx >= AVATARS.length - 1 ? 0 : idx + 1;
+    const result = cycleAvatarSeed(currentSeed, 1, avatarStyle);
     if (typeof onUpdateUserProfile === 'function') {
-      onUpdateUserProfile({ ...userProfile, avatar: AVATARS[newIdx] });
+      onUpdateUserProfile({
+        ...userProfile,
+        avatar: result.avatar,
+        avatarSeed: result.seed,
+        avatarIndex: result.index
+      });
     }
   };
 
@@ -56,7 +69,15 @@ export default function Landing({
   };
 
   const handleEnter = () => {
-    sounds.playJoinChime();
+    try {
+      if (typeof sounds.playJoinChime === 'function') {
+        sounds.playJoinChime();
+      } else if (typeof sounds.playChime === 'function') {
+        sounds.playChime();
+      }
+    } catch (e) {
+      console.warn('Sound play ignored:', e);
+    }
     if (!userProfile?.name?.trim()) {
       const generated = generateAnonymousIdentity();
       if (typeof onUpdateUserProfile === 'function') {
@@ -213,13 +234,22 @@ export default function Landing({
                   <span className="backrooms-orbit-dot"></span>
                 </div>
                 <motion.div
-                  key={currentAvatar}
+                  key={avatarUrl}
                   initial={{ scale: 0.85, opacity: 0.5 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 24 }}
-                  className="backrooms-avatar-emoji"
+                  className="backrooms-avatar-preview"
                 >
-                  {currentAvatar}
+                  {avatarUrl && avatarUrl.startsWith('http') ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="backrooms-avatar-img"
+                      loading="eager"
+                    />
+                  ) : (
+                    <span className="backrooms-avatar-emoji">{currentAvatar || '🐱'}</span>
+                  )}
                 </motion.div>
               </div>
 
