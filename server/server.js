@@ -1137,11 +1137,26 @@ io.on('connection', (socket) => {
       rooms.set(linkedRoomId, newRoom);
     }
 
+    // Clamp and enforce pin coordinates inside PDPM IIITDMJ Campus Bounds
+    let pinLat = Number(pinData.lat);
+    let pinLng = Number(pinData.lng);
+    if (
+      isNaN(pinLat) ||
+      isNaN(pinLng) ||
+      pinLat < 23.1670 ||
+      pinLat > 23.1840 ||
+      pinLng < 80.0130 ||
+      pinLng > 80.0360
+    ) {
+      pinLat = 23.1768;
+      pinLng = 80.0245;
+    }
+
     const newPin = {
       id: pinId,
       type: pinData.type,
-      lat: Number(pinData.lat) || 28.5450,
-      lng: Number(pinData.lng) || 77.1926,
+      lat: pinLat,
+      lng: pinLng,
       title: pinData.title,
       createdBy: pinData.createdBy || { name: 'Anonymous Student', avatar: '🎓', color: '#8b5cf6' },
       createdAt: Date.now(),

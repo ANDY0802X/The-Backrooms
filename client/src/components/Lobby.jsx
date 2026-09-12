@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './Lobby.css';
 import { sounds } from '../utils/sound';
 import Reveal from './Reveal';
-import CampusMap from './CampusMap';
+import CampusMap, { CAMPUS_CENTER, isWithinCampus } from './CampusMap';
 import LostFoundModal from './LostFoundModal';
 import TradeModal from './TradeModal';
 
@@ -42,9 +42,9 @@ export default function Lobby({
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
 
-  // Pin placement & creation state
+  // Pin placement & creation state (defaulted to PDPM IIITDMJ Campus Center)
   const [isPlacingPin, setIsPlacingPin] = useState(false);
-  const [pinCoords, setPinCoords] = useState({ lat: coords?.lat || 28.545000, lng: coords?.lon || 77.192600 });
+  const [pinCoords, setPinCoords] = useState({ lat: CAMPUS_CENTER[0], lng: CAMPUS_CENTER[1] });
   const [activePinTab, setActivePinTab] = useState('room'); // 'room' | 'marketplace' | 'lostfound'
   const [activeLostFoundPinId, setActiveLostFoundPinId] = useState(null);
   const [activeTradePinId, setActiveTradePinId] = useState(null);
@@ -93,6 +93,10 @@ export default function Lobby({
 
     sounds.playSuccess();
 
+    // Enforce campus coordinates
+    const safeLat = isWithinCampus(pinCoords.lat, pinCoords.lng) ? pinCoords.lat : CAMPUS_CENTER[0];
+    const safeLng = isWithinCampus(pinCoords.lat, pinCoords.lng) ? pinCoords.lng : CAMPUS_CENTER[1];
+
     if (activePinTab === 'room') {
       const roomPayload = {
         name: newRoomName.trim(),
@@ -111,8 +115,8 @@ export default function Lobby({
         onCreatePin({
           title: newRoomName.trim(),
           type: 'room',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
+          lat: safeLat,
+          lng: safeLng,
           description: newRoomDesc.trim() || 'Live student lounge on campus.',
           category: newRoomCategory,
           user: userProfile
@@ -123,8 +127,8 @@ export default function Lobby({
         onCreatePin({
           title: newRoomName.trim(),
           type: 'marketplace',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
+          lat: safeLat,
+          lng: safeLng,
           description: newRoomDesc.trim(),
           category: 'Marketplace',
           user: userProfile,
@@ -141,8 +145,8 @@ export default function Lobby({
         onCreatePin({
           title: newRoomName.trim(),
           type: 'lostfound',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
+          lat: safeLat,
+          lng: safeLng,
           description: newRoomDesc.trim(),
           category: 'LostFound',
           user: userProfile,

@@ -611,14 +611,169 @@
   background: var(--bg-surface) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border-subtle) !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
   font-family: var(--font-main, sans-serif) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
-  padding: 3px 8px !important;
-  box-shadow: var(--shadow-sm) !important;
+  padding: 5px 10px !important;
+  box-shadow: var(--shadow-md) !important;
+  backdrop-filter: blur(12px) !important;
+  line-height: 1.3 !important;
 }
 
 .geojson-feature-tooltip::before {
   display: none !important;
+}
+
+.building-cat-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent-subtle, rgba(255, 59, 59, 0.15));
+  color: var(--accent, #ff3b3b);
+  margin-right: 4px;
+}
+
+/* ===================================================
+   COLLEGE MASTER LANDMARK PIN
+   =================================================== */
+
+.custom-college-landmark-wrap {
+  pointer-events: auto !important;
+}
+
+.college-master-landmark {
+  position: relative;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.college-landmark-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border-radius: var(--radius-full, 9999px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  transition: all 0.25s var(--ease-sqs, cubic-bezier(0.16, 1, 0.3, 1));
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.landmark-dark .college-landmark-card {
+  background: rgba(18, 12, 14, 0.92);
+  border: 1.5px solid rgba(255, 59, 59, 0.6);
+  color: #ffffff;
+}
+
+.landmark-light .college-landmark-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1.5px solid #18181b;
+  color: #18181b;
+}
+
+.college-landmark-glow {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 59, 59, 0.35) 0%, transparent 70%);
+  animation: landmarkPulse 3s infinite ease-in-out;
+  z-index: 1;
+}
+
+@keyframes landmarkPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.6); opacity: 1; }
+}
+
+.college-landmark-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.college-landmark-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.college-landmark-name {
+  font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.college-landmark-coords {
+  font-size: 0.68rem;
+  opacity: 0.72;
+  font-weight: 600;
+}
+
+/* ===================================================
+   CAMPUS LOCKED WATERMARK & OUT-OF-BOUNDS TOAST
+   =================================================== */
+
+.campus-locked-badge {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  z-index: 999;
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+
+.campus-lock-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-sage, #10b981);
+  box-shadow: 0 0 8px var(--accent-sage, #10b981);
+}
+
+.map-oob-toast {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(239, 68, 68, 0.95);
+  color: #ffffff;
+  padding: 9px 22px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: var(--font-main, sans-serif);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+  z-index: 1002;
+  pointer-events: none;
+  animation: shakeToast 0.36s ease-in-out;
+}
+
+@keyframes shakeToast {
+  0%, 100% { transform: translateX(-50%); }
+  20%, 60% { transform: translateX(calc(-50% - 6px)); }
+  40%, 80% { transform: translateX(calc(-50% + 6px)); }
 }
