@@ -1,45 +1,64 @@
 /* ==========================================================================
-   SOULNOOK — Curated Minimalist Palette & Studio Pattern System
+   THEBACKROOMS — Theme System: Blood Void (Dark) + Cream Noir (Light)
    ========================================================================== */
 
 /* ----------------------------------------------------
-   LIGHT MODE: Minimal Studio Aesthetic (Linear / Raycast / InkCognito)
+   DARK MODE (DEFAULT): "Blood Void"
+   Near-black void, deep crimson/red accents & glowing glass panels
    ---------------------------------------------------- */
-:root {
-  /* Surface & Background (Squarespace Warm Gallery Minimal) */
-  --bg-core: #f8f8f6;
-  --bg-surface: rgba(255, 255, 255, 0.94);
-  --bg-surface-elevated: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.82);
-  --bg-well: #f0f0ec;
-  --bg-bubble-other: #ecefe9;
-  --bg-bubble-own: #181b22;
+:root,
+[data-theme='dark'] {
+  /* Surface & Background (Near-black with crimson undertones) */
+  --bg-core: #0a0a0c;
+  --bg-surface: rgba(18, 14, 16, 0.92);
+  --bg-surface-elevated: #171315;
+  --bg-glass: rgba(18, 14, 16, 0.82);
+  --bg-well: #110d0f;
+  --bg-bubble-other: #181416;
+  --bg-bubble-own: linear-gradient(135deg, #b00020 0%, #d32f2f 100%);
   --text-bubble-own: #ffffff;
 
-  /* Subtle Borders & Soft Shadows */
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-glass: rgba(0, 0, 0, 0.1);
-  --border-focus: #8b5cf6;
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 22px 50px rgba(0, 0, 0, 0.08);
+  /* Red-Tinted Borders & Glassmorphic Glows */
+  --border-subtle: rgba(255, 59, 59, 0.12);
+  --border-glass: rgba(255, 59, 59, 0.18);
+  --border-glow: rgba(255, 59, 59, 0.35);
+  --border-focus: #ff3b3b;
 
-  /* Curated Harmonious Accents */
-  --accent-lavender: #8b5cf6;
+  /* Atmospheric Shadows with Faint Crimson Bloom */
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.75), 0 0 20px rgba(176, 0, 32, 0.14);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 32px rgba(255, 59, 59, 0.18);
+
+  /* Primary Accent & Red/Orange Gradients */
+  --accent: #b00020;
+  --accent-hover: #ff3b3b;
+  --accent-glow: rgba(255, 59, 59, 0.45);
+  --accent-gradient: linear-gradient(135deg, #b00020 0%, #ff3b3b 100%);
+  --accent-burn: linear-gradient(90deg, #ff3b3b 0%, #ff7a00 50%, #b00020 100%);
+
+  /* Game Category & Utility Accents */
+  --accent-lavender: #ff4d6d;
   --accent-sage: #10b981;
   --accent-amber: #f59e0b;
-  --accent-rose: #f43f5e;
-  --accent-sky: #0ea5e9;
+  --accent-rose: #ff3b3b;
+  --accent-sky: #38bdf8;
 
-  /* Refined High-Legibility Typography */
-  --text-primary: #181b22;
-  --text-secondary: #576071;
-  --text-muted: #8892a4;
-  --doodle-color: #a0a7b5;
+  /* High-Contrast WCAG AA Typography (Bone white body, pure red for accents only) */
+  --text-primary: #f5f5f7;
+  --text-secondary: #b5a9ab;
+  --text-muted: #7d7274;
+  --doodle-color: rgba(255, 59, 59, 0.14);
 
-  /* Typography Fonts & Spacing */
-  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Ambient Aura Glows */
+  --aura-color-1: rgba(176, 0, 32, 0.22);
+  --aura-color-2: rgba(255, 59, 59, 0.14);
+
+  /* Three-Tier Typography System */
+  --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-main: var(--font-body);
+  --font-display: var(--font-heading);
   --font-doodle: 'Caveat', cursive;
 
   /* Radii */
@@ -48,36 +67,60 @@
   --radius-lg: 24px;
   --radius-full: 9999px;
 
-  /* Squarespace Physics & Easing */
+  /* Physics & Transitions */
   --ease-sqs: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-smooth: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* ----------------------------------------------------
-   DARK MODE: Velvety Graphite & Void Glass (Soft, Eye-Friendly Contrast)
+   LIGHT MODE: "Cream Noir"
+   Warm cream backdrop, near-black ink typography, soft off-white panels, muted burgundy accent
    ---------------------------------------------------- */
-[data-theme='dark'] {
-  --bg-core: #0d1017;
-  --bg-surface: rgba(21, 25, 34, 0.94);
-  --bg-surface-elevated: #1a202d;
-  --bg-glass: rgba(21, 25, 34, 0.82);
-  --bg-well: #131620;
-  --bg-bubble-other: #181d27;
-  --bg-bubble-own: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+[data-theme='light'] {
+  /* Warm Cream Surfaces */
+  --bg-core: #f5f0e6;
+  --bg-surface: rgba(250, 246, 238, 0.94);
+  --bg-surface-elevated: #ffffff;
+  --bg-glass: rgba(250, 246, 238, 0.85);
+  --bg-well: #ebe5d8;
+  --bg-bubble-other: #eae4d6;
+  --bg-bubble-own: linear-gradient(135deg, #1f1b1c 0%, #2e2628 100%);
   --text-bubble-own: #ffffff;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-glass: rgba(255, 255, 255, 0.12);
-  --border-focus: #9d7bf7;
-  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
+  /* Black-tinted subtle borders & burgundy glow */
+  --border-subtle: rgba(26, 26, 26, 0.09);
+  --border-glass: rgba(26, 26, 26, 0.14);
+  --border-glow: rgba(163, 29, 36, 0.25);
+  --border-focus: #a31d24;
 
-  /* Soft Pearlescent White for High Contrast without Glare */
-  --text-primary: #e6e9f2;
-  --text-secondary: #949db0;
-  --text-muted: #646d82;
-  --doodle-color: #232836;
+  /* Soft Warm Shadows */
+  --shadow-sm: 0 2px 10px rgba(40, 30, 20, 0.04);
+  --shadow-md: 0 10px 30px rgba(40, 30, 20, 0.08), 0 0 15px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 22px 50px rgba(40, 30, 20, 0.12);
+
+  /* Muted Burgundy Accent */
+  --accent: #a31d24;
+  --accent-hover: #b8242b;
+  --accent-glow: rgba(163, 29, 36, 0.25);
+  --accent-gradient: linear-gradient(135deg, #a31d24 0%, #c42b33 100%);
+  --accent-burn: linear-gradient(90deg, #a31d24 0%, #d9534f 50%, #f59e0b 100%);
+
+  /* Game Accents */
+  --accent-lavender: #b00020;
+  --accent-sage: #059669;
+  --accent-amber: #d97706;
+  --accent-rose: #dc2626;
+  --accent-sky: #0284c7;
+
+  /* Near-black ink typography (High WCAG AA contrast against cream) */
+  --text-primary: #1a1a1a;
+  --text-secondary: #4d4542;
+  --text-muted: #786e68;
+  --doodle-color: rgba(26, 26, 26, 0.08);
+
+  /* Ambient Aura */
+  --aura-color-1: rgba(163, 29, 36, 0.08);
+  --aura-color-2: rgba(217, 83, 79, 0.06);
 }
 
 /* Global Reset */
@@ -113,8 +156,7 @@ html, body {
 }
 
 /* ----------------------------------------------------
-   MINIMALIST STUDIO BACKGROUND PATTERN
-   (Refined Micro-Dot Matrix + Ambient Glow)
+   STUDIO BACKGROUND PATTERN
    ---------------------------------------------------- */
 .studio-pattern-backdrop {
   position: fixed;
@@ -134,23 +176,19 @@ html, body {
   filter: blur(130px);
   pointer-events: none;
   z-index: 0;
-  opacity: 0.12;
-}
-
-[data-theme='dark'] .studio-ambient-aura {
-  opacity: 0.22;
+  opacity: 0.16;
 }
 
 .aura-top-left {
   top: -150px;
   left: 10%;
-  background: var(--accent-lavender);
+  background: var(--aura-color-1);
 }
 
 .aura-bottom-right {
   bottom: -150px;
   right: 10%;
-  background: var(--accent-sage);
+  background: var(--aura-color-2);
 }
 
 /* Custom Minimal Scrollbars */
@@ -169,14 +207,36 @@ html, body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-lavender);
+  background: var(--accent);
 }
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-weight: 700;
   letter-spacing: -0.025em;
+}
+
+body, p, button, input, select, textarea {
+  font-family: var(--font-body);
+}
+
+/* Monospace UI Chrome, Timers, Room Codes, Countdown Badges */
+.font-mono,
+.room-code-pill-btn,
+.room-code-text,
+.game-timer-pill,
+.hud-timer,
+.live-pulse-badge,
+.room-ping-indicator,
+.backrooms-code-input,
+.chain-letter-display,
+.score-pill,
+.opt-letter,
+.chat-bubble-meta span:last-child {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 /* ----------------------------------------------------
@@ -205,8 +265,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .glass-panel-interactive:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow: var(--shadow-lg), 0 0 20px var(--border-glow);
+  border-color: var(--border-glow);
 }
 
 /* Generic Hover Lift Utility */
@@ -246,7 +306,7 @@ button {
 }
 
 .btn-pill-primary {
-  background: #181b22;
+  background: var(--accent-gradient);
   color: #ffffff;
   padding: 12px 28px;
   border-radius: var(--radius-full);
@@ -255,22 +315,14 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 18px var(--accent-glow);
   transition: all 0.26s var(--ease-sqs);
-}
-
-[data-theme='dark'] .btn-pill-primary {
-  background: var(--accent-lavender);
-  box-shadow: 0 4px 18px rgba(157, 123, 247, 0.3);
 }
 
 .btn-pill-primary:hover {
   transform: translateY(-2px) scale(1.015);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
-}
-
-[data-theme='dark'] .btn-pill-primary:hover {
-  box-shadow: 0 10px 28px rgba(157, 123, 247, 0.45);
+  box-shadow: 0 10px 28px var(--accent-glow);
+  filter: brightness(1.08);
 }
 
 .btn-pill-primary:active {
@@ -368,8 +420,9 @@ button {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #f43f5e, #f59e0b, #8b5cf6);
+  height: 2.5px;
+  background: var(--accent-burn);
+  box-shadow: 0 0 8px var(--accent-glow);
   width: 100%;
   animation: burnDownBar 12s linear forwards;
 }

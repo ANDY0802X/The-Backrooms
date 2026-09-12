@@ -191,10 +191,10 @@
 }
 
 [data-theme='dark'] .arena-tab-pill.active {
-  background: var(--accent-lavender);
+  background: var(--accent-gradient);
   color: #ffffff;
-  border-color: var(--accent-lavender);
-  box-shadow: 0 4px 16px rgba(157, 123, 247, 0.35);
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px var(--accent-glow);
 }
 
 .arena-round-actions {
@@ -340,7 +340,7 @@
 
 .size-slider {
   width: 65px;
-  accent-color: var(--accent-violet);
+  accent-color: var(--accent);
   cursor: pointer;
 }
 /* ----------------------------------------------------
@@ -436,9 +436,9 @@
 }
 
 .trivia-option-btn.selected {
-  background: rgba(157, 123, 247, 0.15);
-  border-color: var(--accent-lavender);
-  color: var(--accent-lavender);
+  background: var(--accent-glow);
+  border-color: var(--border-focus);
+  color: var(--text-primary);
 }
 
 .trivia-option-btn.correct {
@@ -767,14 +767,14 @@
 .ephemeral-toggle-btn.active {
   opacity: 1;
   transform: scale(1.15);
-  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.6));
+  filter: drop-shadow(0 0 6px var(--accent-glow));
 }
 
 .chat-send-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--accent-lavender);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
   display: flex;
@@ -782,6 +782,7 @@
   justify-content: center;
   cursor: pointer;
   font-size: 0.85rem;
+  box-shadow: 0 2px 8px var(--accent-glow);
   transition: transform 0.15s;
 }
 

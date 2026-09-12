@@ -2,6 +2,11 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -1096,6 +1101,11 @@ io.on('connection', (socket) => {
 
   socket.on('leave_room', handleLeave);
   socket.on('disconnect', handleLeave);
+});
+
+app.use(express.static(path.join(__dirname, '../client/dist')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 
 httpServer.listen(PORT, '0.0.0.0', () => {

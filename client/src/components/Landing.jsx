@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Landing.css';
 import { sounds } from '../utils/sound';
-import { AVATARS } from '../utils/identity';
+import { AVATARS, generateAnonymousIdentity } from '../utils/identity';
 import Reveal from './Reveal';
 
 export default function Landing({
@@ -18,7 +18,7 @@ export default function Landing({
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [inputCode, setInputCode] = useState('');
 
-  const displayName = userProfile?.name || 'Hazy_Philosopher';
+  const displayName = userProfile?.name !== undefined ? userProfile.name : '';
   const currentAvatar = userProfile?.avatar || '😴';
 
   // Cycle avatar left / right
@@ -49,6 +49,12 @@ export default function Landing({
 
   const handleEnter = () => {
     sounds.playChime();
+    if (!userProfile?.name?.trim()) {
+      const generated = generateAnonymousIdentity();
+      if (typeof onUpdateUserProfile === 'function') {
+        onUpdateUserProfile({ ...userProfile, name: generated.name });
+      }
+    }
     if (typeof onEnterLounge === 'function') {
       onEnterLounge();
     }
@@ -175,6 +181,7 @@ export default function Landing({
               <input
                 type="text"
                 className="backrooms-alias-input"
+                placeholder="Enter your alias..."
                 value={displayName}
                 onChange={(e) => {
                   if (typeof onUpdateUserProfile === 'function') {
