@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { io } from 'socket.io-client';
 import Landing from './components/Landing';
 import Lobby from './components/Lobby';
 import RoomView from './components/RoomView';
 import { generateAnonymousIdentity } from './utils/identity';
 import { sounds } from './utils/sound';
-import { realtimeMesh } from './services/realtimeMesh';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+const socket = io(SERVER_URL);
 
 const VIEW_ORDER = {
   landing: 0,
@@ -58,8 +61,7 @@ export default function App() {
   });
 
   const [currentRoomId, setCurrentRoomId] = useState(null);
-  const [rooms, setRooms] = useState(() => realtimeMesh.getRooms());
-  const socketRef = useRef(realtimeMesh);
+  const [rooms, setRooms] = useState([]);
 
   // Sync theme with HTML root attribute
   useEffect(() => {
@@ -76,19 +78,18 @@ export default function App() {
     sessionStorage.setItem('soulnook_user', JSON.stringify(userProfile));
   }, [userProfile]);
 
-  // Connect to Realtime Mesh & Listen for Rooms
+  // Connect to Socket.io & Listen for Rooms
   useEffect(() => {
     const handleRoomsUpdate = (updatedRooms) => {
-      setRooms(updatedRooms);
+      if (Array.isArray(updatedRooms)) {
+        setRooms(updatedRooms);
+      }
     };
 
-    realtimeMesh.on('rooms_update', handleRoomsUpdate);
-
-    // Initial sync
-    setRooms(realtimeMesh.getRooms());
+    socket.on('rooms_update', handleRoomsUpdate);
 
     return () => {
-      realtimeMesh.off('rooms_update', handleRoomsUpdate);
+      socket.off('rooms_update', handleRoomsUpdate);
     };
   }, []);
 
@@ -112,17 +113,17 @@ export default function App() {
 
   const handleJoinRoomByCode = (code) => {
     if (!code) return;
-    realtimeMesh.emit('join_room_by_code', { code, user: userProfile }, ({ success, roomId }) => {
-      if (success && roomId) {
-        handleJoinRoom(roomId);
+    socket.emit('join_room_by_code', { code, user: userProfile }, (res) => {
+      if (res && res.success && res.roomId) {
+        handleJoinRoom(res.roomId);
       }
     });
   };
 
   const handleCreateRoom = (roomData) => {
-    realtimeMesh.emit('create_room', roomData, ({ success, roomId }) => {
-      if (success && roomId) {
-        handleJoinRoom(roomId);
+    socket.emit('create_room', roomData, (res) => {
+      if (res && res.success && res.roomId) {
+        handleJoinRoom(res.roomId);
       }
     });
   };
@@ -162,6 +163,7 @@ export default function App() {
 
           {currentView === 'lobby' && (
             <Lobby
+              socket={socket}
               rooms={rooms}
               userProfile={userProfile}
               onUpdateUserProfile={setUserProfile}
@@ -177,7 +179,7 @@ export default function App() {
 
           {currentView === 'room' && currentRoomId && (
             <RoomView
-              socket={socketRef.current}
+              socket={socket}
               roomId={currentRoomId}
               userProfile={userProfile}
               onLeaveRoom={handleLeaveRoom}

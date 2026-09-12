@@ -354,7 +354,7 @@ export default function RoomView({
   const handleClearCanvasClick = () => {
     clearLocalCanvas();
     sounds.playPop();
-    if (socket) socket.emit('clear_canvas', { roomId });
+    if (socket) socket.emit('clear_canvas');
   };
 
   const getCanvasCoords = (e) => {
@@ -391,7 +391,7 @@ export default function RoomView({
 
     drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser);
     strokeHistoryRef.current.push(stroke);
-    if (socket) socket.emit('draw_stroke', { roomId, stroke });
+    if (socket) socket.emit('draw_stroke', stroke);
 
     lastPointRef.current = coords;
   };
@@ -416,19 +416,19 @@ export default function RoomView({
     const text = inputText.trim();
     if (!text || !socket) return;
 
-    socket.emit('send_message', { roomId, text, isEphemeral });
+    socket.emit('send_message', { text, isEphemeral });
     sounds.playSend();
     setInputText('');
-    socket.emit('typing_stop', {});
+    socket.emit('typing_status', { isTyping: false });
   };
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
     if (!socket) return;
-    socket.emit('typing_start', {});
+    socket.emit('typing_status', { isTyping: true });
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      socket.emit('typing_stop', {});
+      socket.emit('typing_status', { isTyping: false });
     }, 1800);
   };
 
@@ -436,35 +436,30 @@ export default function RoomView({
   const handleSwitchGame = (gameType) => {
     sounds.playBoing();
     setGameState(prev => ({ ...prev, type: gameType }));
-    if (socket) socket.emit('start_game', { gameType });
+    if (socket) socket.emit('switch_game', { gameType });
   };
 
   const handleToggleGame = () => {
-    if (gameState.isActive) {
-      sounds.playPop();
-      if (socket) socket.emit('stop_game', {});
-    } else {
-      sounds.playSuccess();
-      if (socket) socket.emit('start_game', { gameType: gameState.type });
-    }
+    sounds.playPop();
+    if (socket) socket.emit('toggle_game');
   };
 
   const handleTriviaAnswer = (index) => {
     if (!socket || gameState.selectedAnswerIdx !== null) return;
     sounds.playBoing();
-    socket.emit('trivia_submit_answer', { answerIndex: index });
+    socket.emit('submit_trivia_answer', { answerIndex: index });
   };
 
   const handlePopTarget = (target) => {
     if (!socket) return;
     sounds.playPop();
-    socket.emit('emojipop_click_target', { targetId: target.id });
+    socket.emit('pop_emoji_target', { targetId: target.id, points: target.points });
   };
 
   const handleNextTruthVent = () => {
     if (socket) {
       sounds.playBoing();
-      socket.emit('truthvent_next_prompt', {});
+      socket.emit('next_truth_vent_prompt');
     }
   };
 
@@ -481,7 +476,7 @@ export default function RoomView({
     if (!word || !socket) return;
 
     sounds.playPop();
-    socket.emit('wordchain_submit_word', { word });
+    socket.emit('send_message', { text: word });
     setGameState(prev => ({ ...prev, wordChainInput: '' }));
   };
 
