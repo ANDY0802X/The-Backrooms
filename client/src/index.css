@@ -6,40 +6,40 @@
    LIGHT MODE: Minimal Studio Aesthetic (Linear / Raycast / InkCognito)
    ---------------------------------------------------- */
 :root {
-  /* Surface & Background */
-  --bg-core: #f8f9fa;
-  --bg-surface: rgba(255, 255, 255, 0.9);
+  /* Surface & Background (Squarespace Warm Gallery Minimal) */
+  --bg-core: #f8f8f6;
+  --bg-surface: rgba(255, 255, 255, 0.94);
   --bg-surface-elevated: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.7);
-  --bg-well: #f1f3f5;
-  --bg-bubble-other: #f1f3f5;
-  --bg-bubble-own: #1e1e24;
+  --bg-glass: rgba(255, 255, 255, 0.82);
+  --bg-well: #f0f0ec;
+  --bg-bubble-other: #ecefe9;
+  --bg-bubble-own: #181b22;
   --text-bubble-own: #ffffff;
 
-  /* Subtle Borders & Shadows */
-  --border-subtle: rgba(0, 0, 0, 0.07);
-  --border-glass: rgba(0, 0, 0, 0.08);
+  /* Subtle Borders & Soft Shadows */
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-glass: rgba(0, 0, 0, 0.1);
   --border-focus: #8b5cf6;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.03);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.09);
+  --shadow-lg: 0 22px 50px rgba(0, 0, 0, 0.08);
 
-  /* Curated Minimal Pastels & Accents */
+  /* Curated Harmonious Accents */
   --accent-lavender: #8b5cf6;
   --accent-sage: #10b981;
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
   --accent-sky: #0ea5e9;
 
-  /* Neutral Typography */
-  --text-primary: #12141a;
-  --text-secondary: #525866;
-  --text-muted: #8c93a3;
-  --doodle-color: #9ca3af;
+  /* Refined High-Legibility Typography */
+  --text-primary: #181b22;
+  --text-secondary: #576071;
+  --text-muted: #8892a4;
+  --doodle-color: #a0a7b5;
 
-  /* Typography Fonts */
-  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Space Grotesk', sans-serif;
+  /* Typography Fonts & Spacing */
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-doodle: 'Caveat', cursive;
 
   /* Radii */
@@ -47,32 +47,37 @@
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-full: 9999px;
+
+  /* Squarespace Physics & Easing */
+  --ease-sqs: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* ----------------------------------------------------
-   DARK MODE: TheBackrooms Abyssal Obsidian & Void Glass
+   DARK MODE: Velvety Graphite & Void Glass (Soft, Eye-Friendly Contrast)
    ---------------------------------------------------- */
 [data-theme='dark'] {
-  --bg-core: #040508;
-  --bg-surface: rgba(10, 12, 19, 0.92);
-  --bg-surface-elevated: #0f121d;
-  --bg-glass: rgba(10, 12, 19, 0.75);
-  --bg-well: #06070c;
-  --bg-bubble-other: #0f121d;
+  --bg-core: #0d1017;
+  --bg-surface: rgba(21, 25, 34, 0.94);
+  --bg-surface-elevated: #1a202d;
+  --bg-glass: rgba(21, 25, 34, 0.82);
+  --bg-well: #131620;
+  --bg-bubble-other: #181d27;
   --bg-bubble-own: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
   --text-bubble-own: #ffffff;
 
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-glass: rgba(255, 255, 255, 0.09);
-  --border-focus: #8b5cf6;
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.6);
-  --shadow-md: 0 14px 36px rgba(0, 0, 0, 0.85);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.95);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --border-focus: #9d7bf7;
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
 
-  --text-primary: #f1f3f9;
-  --text-secondary: #9098ac;
-  --text-muted: #565d70;
-  --doodle-color: #242938;
+  /* Soft Pearlescent White for High Contrast without Glare */
+  --text-primary: #e6e9f2;
+  --text-secondary: #949db0;
+  --text-muted: #646d82;
+  --doodle-color: #232836;
 }
 
 /* Global Reset */
@@ -91,8 +96,8 @@ html, body {
   color: var(--text-primary);
   font-family: var(--font-main);
   overflow-x: hidden;
-  line-height: 1.5;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  line-height: 1.55;
+  transition: background-color 0.35s var(--ease-sqs), color 0.35s var(--ease-sqs);
 }
 
 #root {
@@ -200,17 +205,17 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(139, 92, 246, 0.3);
 }
 
-/* Buttons */
+/* Buttons & Interactive Elements */
 button {
   font-family: var(--font-main);
   cursor: pointer;
   border: none;
   outline: none;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.24s var(--ease-sqs);
 }
 
 .btn-pill-primary {
-  background: #11141c;
+  background: #181b22;
   color: #ffffff;
   padding: 12px 28px;
   border-radius: var(--radius-full);
@@ -219,28 +224,33 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: all 0.26s var(--ease-sqs);
 }
 
 [data-theme='dark'] .btn-pill-primary {
   background: var(--accent-lavender);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 4px 18px rgba(157, 123, 247, 0.3);
 }
 
 .btn-pill-primary:hover {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme='dark'] .btn-pill-primary:hover {
+  box-shadow: 0 10px 28px rgba(157, 123, 247, 0.45);
 }
 
 .btn-pill-primary:active {
-  transform: scale(0.98);
+  transform: scale(0.97) translateY(0);
 }
 
 .btn-pill-secondary {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  padding: 8px 16px;
+  padding: 8px 18px;
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: 0.84rem;
@@ -248,12 +258,18 @@ button {
   align-items: center;
   gap: 6px;
   box-shadow: var(--shadow-sm);
+  transition: all 0.22s var(--ease-sqs);
 }
 
 .btn-pill-secondary:hover {
   background: var(--bg-surface-elevated);
   border-color: var(--text-muted);
-  transform: translateY(-1px);
+  transform: translateY(-1.5px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-pill-secondary:active {
+  transform: scale(0.97);
 }
 
 .btn-pill-icon {
@@ -267,12 +283,18 @@ button {
   align-items: center;
   justify-content: center;
   font-size: 1.05rem;
+  transition: all 0.24s var(--ease-sqs);
 }
 
 .btn-pill-icon:hover {
   background: var(--bg-surface-elevated);
   color: var(--text-primary);
-  transform: scale(1.05);
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-pill-icon:active {
+  transform: scale(0.95);
 }
 
 /* Badges */
@@ -280,10 +302,11 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-full);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 /* Floating Reactions */
@@ -359,25 +382,47 @@ button {
   }
 }
 
-/* Modal Popup Overlay */
+/* ----------------------------------------------------
+   SQUARESPACE-INSPIRED VIEW TRANSITIONS & KEYFRAMES
+   ---------------------------------------------------- */
+.view-stage-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  animation: sqsViewFadeUp 0.4s var(--ease-sqs) forwards;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes sqsViewFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal Popup Overlay (Preserved if needed) */
 .game-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(13, 16, 23, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: fadeInBackdrop 0.25s ease-out;
+  animation: fadeInBackdrop 0.3s var(--ease-sqs);
 }
 
 .game-modal-container {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-glass);
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 680px;
@@ -385,7 +430,7 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: popModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: popModalIn 0.35s var(--ease-sqs);
 }
 
 @keyframes fadeInBackdrop {
@@ -396,11 +441,12 @@ button {
 @keyframes popModalIn {
   from {
     opacity: 0;
-    transform: scale(0.92) translateY(16px);
+    transform: scale(0.94) translateY(14px);
   }
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
 }
+
 

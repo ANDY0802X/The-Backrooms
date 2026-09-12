@@ -39,7 +39,6 @@ export default function RoomView({
   const [isEphemeral, setIsEphemeral] = useState(false);
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [floatingParticles, setFloatingParticles] = useState([]);
-  const [isGameModalOpen, setIsGameModalOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
   // Multi-Game State
@@ -468,6 +467,13 @@ export default function RoomView({
     }
   };
 
+  const handleSharePromptToChat = () => {
+    if (!socket || !gameState.prompt) return;
+    const promptText = `🎭 [${(gameState.prompt.type || 'Vent').toUpperCase()}] ${gameState.prompt.text || ''}`;
+    socket.emit('send_message', { roomId, text: promptText, isEphemeral: false });
+    sounds.playSend();
+  };
+
   const handleWordChainSubmit = (e) => {
     e.preventDefault();
     const word = (gameState.wordChainInput || '').trim();
@@ -510,18 +516,28 @@ export default function RoomView({
         </div>
 
         <div className="room-header-center">
-          {/* Main Mini-Games Pop-up Launcher Button */}
-          <button
-            className={`btn-pill-primary ${gameState.isActive ? 'game-active-glow' : ''}`}
-            style={{ padding: '8px 18px', fontSize: '0.85rem' }}
-            onClick={() => {
-              sounds.playPop();
-              setIsGameModalOpen(true);
-            }}
-          >
-            <span>🎮 Mini-Games {gameState.isActive ? `(${gameState.timeLeft}s)` : '(5)'}</span>
-            <span className="pop-icon">↗</span>
-          </button>
+          <div className="activity-live-status-pill">
+            <span className="activity-icon">
+              {gameState.type === 'scribble' && '🎨'}
+              {gameState.type === 'trivia' && '⚡'}
+              {gameState.type === 'wordchain' && '🔗'}
+              {gameState.type === 'emojipop' && '💥'}
+              {gameState.type === 'truthvent' && '🎭'}
+            </span>
+            <span className="activity-name">
+              {gameState.type === 'scribble' && 'Canvas & Scribble'}
+              {gameState.type === 'trivia' && 'Campus Trivia Blitz'}
+              {gameState.type === 'wordchain' && 'Rapid Word Chain'}
+              {gameState.type === 'emojipop' && 'Emoji Pop Reflex'}
+              {gameState.type === 'truthvent' && 'Truth, Vent & Dare'}
+            </span>
+            {gameState.isActive && (
+              <span className="live-pulse-badge">
+                <span className="pulsing-ping-dot" style={{ width: '6px', height: '6px' }}></span>
+                {gameState.timeLeft}s
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="room-header-right">
@@ -543,7 +559,7 @@ export default function RoomView({
           {/* Theme Toggle */}
           <button
             className="btn-pill-secondary"
-            style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
             onClick={() => {
               sounds.playPop();
               onToggleTheme();
@@ -555,69 +571,316 @@ export default function RoomView({
         </div>
       </header>
 
-      {/* Main Split Layout: Left Canvas | Right Chat */}
+      {/* Main Split Layout: Left In-Window Arena | Right Real-Time Chat */}
       <main className="room-split-layout">
-        {/* LEFT: Continuous Synchronized Collaborative Canvas */}
+        {/* LEFT: Continuous In-Window Interactive Arena */}
         <section className="game-pane">
-          <div className="canvas-wrapper">
-            {/* Active Game Floating Banner (if running) */}
-            {gameState.isActive && (
-              <div
-                className="canvas-game-alert-strip"
-                onClick={() => setIsGameModalOpen(true)}
-                title="Click to open game popup"
-              >
-                <span>🎮 Live {gameState.type.toUpperCase()} in progress! Time left: {gameState.timeLeft}s</span>
-                <span className="strip-cta">Open Game Popup ↗</span>
+          {/* Top Activity Switcher Bar */}
+          <div className="arena-activity-nav">
+            <div className="arena-tabs-scroll">
+              {[
+                { id: 'scribble', icon: '🎨', label: 'Canvas & Scribble' },
+                { id: 'trivia', icon: '⚡', label: 'Trivia Blitz' },
+                { id: 'wordchain', icon: '🔗', label: 'Word Chain' },
+                { id: 'emojipop', icon: '💥', label: 'Emoji Pop' },
+                { id: 'truthvent', icon: '🎭', label: 'Truth & Vent' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  className={`arena-tab-pill ${gameState.type === tab.id ? 'active' : ''}`}
+                  onClick={() => handleSwitchGame(tab.id)}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Quick Round Control Action */}
+            <div className="arena-round-actions">
+              {gameState.type === 'scribble' && (
+                <button className="btn-pill-secondary" style={{ padding: '5px 12px', fontSize: '0.78rem' }} onClick={handleToggleGame}>
+                  {gameState.isActive ? '⏸️ Stop Round' : '▶️ Play Scribble'}
+                </button>
+              )}
+              {gameState.type === 'trivia' && (
+                <button className="btn-pill-primary" style={{ padding: '5px 14px', fontSize: '0.78rem' }} onClick={handleToggleGame}>
+                  {gameState.isActive ? 'Next Question ➔' : 'Start Trivia'}
+                </button>
+              )}
+              {gameState.type === 'truthvent' && (
+                <button className="btn-pill-primary" style={{ padding: '5px 14px', fontSize: '0.78rem' }} onClick={handleNextTruthVent}>
+                  Next Prompt ➔
+                </button>
+              )}
+              {gameState.type === 'emojipop' && (
+                <button className="btn-pill-secondary" style={{ padding: '5px 12px', fontSize: '0.78rem' }} onClick={handleToggleGame}>
+                  {gameState.isActive ? 'Pause Pop' : 'Start Pop'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Activity Screen Area */}
+          <div className="arena-stage-container">
+            {/* 1. Canvas & Scribble Screen */}
+            {gameState.type === 'scribble' && (
+              <div className="canvas-wrapper">
+                {/* Active Scribble Word Banner */}
+                {gameState.isActive && (
+                  <div className="scribble-hud-strip">
+                    {gameState.isDrawer ? (
+                      <div className="scribble-hud-content">
+                        <span className="hud-badge">🎨 YOU ARE DRAWING:</span>
+                        <span className="hud-word">{gameState.word}</span>
+                        <span className="hud-note">Peers are guessing in chat alongside!</span>
+                      </div>
+                    ) : (
+                      <div className="scribble-hud-content">
+                        <span className="hud-badge">🤔 GUESS IN CHAT:</span>
+                        <span className="hud-word">{gameState.maskedWord}</span>
+                        <span className="hud-note">Type guesses in the chat on the right!</span>
+                      </div>
+                    )}
+                    <span className="hud-timer">⏱️ {gameState.timeLeft}s</span>
+                  </div>
+                )}
+
+                <canvas
+                  ref={canvasRef}
+                  className="drawing-canvas"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+
+                {/* Floating Drawing Toolbar */}
+                <div className="canvas-floating-toolbar">
+                  {PALETTE.map((c, i) => (
+                    <button
+                      key={i}
+                      className={`toolbar-color-btn ${brushColor === c && !isEraser ? 'active' : ''}`}
+                      style={{ backgroundColor: c }}
+                      onClick={() => {
+                        setBrushColor(c);
+                        setIsEraser(false);
+                        sounds.playPop();
+                      }}
+                    />
+                  ))}
+                  <div className="tool-separator" />
+                  <button
+                    className={`filter-tab-pill ${isEraser ? 'active' : ''}`}
+                    onClick={() => setIsEraser(!isEraser)}
+                  >
+                    🧹 Eraser
+                  </button>
+                  <input
+                    type="range"
+                    min="2"
+                    max="28"
+                    value={brushWidth}
+                    onChange={(e) => setBrushWidth(Number(e.target.value))}
+                    className="size-slider"
+                    title="Brush Size"
+                  />
+                  <div className="tool-separator" />
+                  <button className="filter-tab-pill" onClick={handleClearCanvasClick}>🗑️ Clear</button>
+                  <button className="filter-tab-pill" onClick={exportCanvasSnapshot}>📸 Save</button>
+                </div>
               </div>
             )}
 
-            <canvas
-              ref={canvasRef}
-              className="drawing-canvas"
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-            />
+            {/* 2. Campus Trivia Blitz Screen */}
+            {gameState.type === 'trivia' && (
+              <div className="game-deck-wrapper">
+                <div className="trivia-deck">
+                  <div className="game-deck-header">
+                    <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
+                      ⚡ CAMPUS TRIVIA BLITZ
+                    </span>
+                    <span className="game-timer-pill">
+                      ⏱️ {gameState.timeLeft}s left
+                    </span>
+                  </div>
 
-            {/* Floating Drawing Toolbar */}
-            <div className="canvas-floating-toolbar">
-              {PALETTE.map((c, i) => (
-                <button
-                  key={i}
-                  className={`toolbar-color-btn ${brushColor === c && !isEraser ? 'active' : ''}`}
-                  style={{ backgroundColor: c }}
-                  onClick={() => {
-                    setBrushColor(c);
-                    setIsEraser(false);
-                    sounds.playPop();
-                  }}
-                />
-              ))}
-              <div className="tool-separator" />
-              <button
-                className={`filter-tab-pill ${isEraser ? 'active' : ''}`}
-                onClick={() => setIsEraser(!isEraser)}
-              >
-                🧹 Eraser
-              </button>
-              <input
-                type="range"
-                min="2"
-                max="28"
-                value={brushWidth}
-                onChange={(e) => setBrushWidth(Number(e.target.value))}
-                className="size-slider"
-                title="Brush Size"
-              />
-              <div className="tool-separator" />
-              <button className="filter-tab-pill" onClick={handleClearCanvasClick}>🗑️ Clear</button>
-              <button className="filter-tab-pill" onClick={exportCanvasSnapshot}>📸 Save</button>
-            </div>
+                  <h2 className="trivia-question-title">
+                    {gameState.question || "Ready for rapid campus & tech trivia showdown?"}
+                  </h2>
+
+                  <div className="trivia-options-grid">
+                    {(gameState.options && gameState.options.length > 0 ? gameState.options : [
+                      "Option A", "Option B", "Option C", "Option D"
+                    ]).map((opt, i) => {
+                      const isSelected = gameState.selectedAnswerIdx === i;
+                      const isResolved = gameState.resolvedAnswer !== null;
+                      const isCorrect = isResolved && gameState.resolvedAnswer.correctIndex === i;
+
+                      let btnClass = 'trivia-option-btn';
+                      if (isSelected) btnClass += ' selected';
+                      if (isCorrect) btnClass += ' correct';
+
+                      return (
+                        <button
+                          key={i}
+                          className={btnClass}
+                          onClick={() => handleTriviaAnswer(i)}
+                          disabled={gameState.selectedAnswerIdx !== null}
+                        >
+                          <span className="opt-letter">{['A', 'B', 'C', 'D'][i]}</span>
+                          <span>{opt}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Leaderboard Row */}
+                  {gameState.scores && Object.keys(gameState.scores).length > 0 && (
+                    <div className="deck-scores-row">
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>🏆 Leaderboard:</span>
+                      {Object.entries(gameState.scores).map(([name, score]) => (
+                        <span key={name} className="score-pill">
+                          {name}: {score} pts
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Rapid Word Chain Screen */}
+            {gameState.type === 'wordchain' && (
+              <div className="game-deck-wrapper">
+                <div className="wordchain-deck">
+                  <div className="game-deck-header">
+                    <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-sage)' }}>
+                      🔗 RAPID WORD CHAIN
+                    </span>
+                    <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
+                      🔥 Streak: {gameState.streakCount}x
+                    </span>
+                  </div>
+
+                  <div className="wordchain-hero-card">
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Next Word Must Start With
+                    </span>
+                    <div className="chain-letter-display">
+                      {gameState.currentLetter || 'C'}
+                    </div>
+                    <div className="chain-last-played">
+                      Last played: <strong>{gameState.lastWord || 'Campus'}</strong>
+                    </div>
+                  </div>
+
+                  <form className="wordchain-form-bar" onSubmit={handleWordChainSubmit}>
+                    <input
+                      type="text"
+                      className="wordchain-input-field"
+                      placeholder={`Enter word starting with "${gameState.currentLetter || 'C'}"...`}
+                      value={gameState.wordChainInput || ''}
+                      onChange={(e) => setGameState(prev => ({ ...prev, wordChainInput: e.target.value }))}
+                      autoFocus
+                    />
+                    <button type="submit" className="btn-pill-primary">
+                      Submit
+                    </button>
+                  </form>
+
+                  {gameState.wordHistory && gameState.wordHistory.length > 0 && (
+                    <div className="chain-trail-box">
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Recent Trail:</span>
+                      <div className="chain-tags-row">
+                        {gameState.wordHistory.slice(-8).map((w, idx) => (
+                          <span key={idx} className="chain-word-chip">{w}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Emoji Pop Reflex Screen */}
+            {gameState.type === 'emojipop' && (
+              <div className="emojipop-full-arena">
+                <div className="emojipop-top-bar">
+                  <span className="badge-pill" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)' }}>
+                    💥 EMOJI POP REFLEX
+                  </span>
+                  {gameState.scores && gameState.scores[userProfile.name] !== undefined && (
+                    <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
+                      Your Score: {gameState.scores[userProfile.name]} pts
+                    </span>
+                  )}
+                </div>
+
+                <div className="emojipop-click-field">
+                  {(gameState.targets || []).map(target => (
+                    <div
+                      key={target.id}
+                      className="emojipop-target-item"
+                      style={{ left: `${target.x}%`, top: `${target.y}%`, fontSize: `${target.size}px` }}
+                      onClick={() => handlePopTarget(target)}
+                    >
+                      <span>{target.emoji}</span>
+                      <span className="target-points-badge">+{target.points}</span>
+                    </div>
+                  ))}
+                  {(!gameState.targets || gameState.targets.length === 0) && (
+                    <div className="emojipop-idle-placeholder">
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                        Click below to spawn targets and test your reflexes!
+                      </p>
+                      <button className="btn-pill-primary" onClick={handleToggleGame}>
+                        🚀 Start Emoji Pop
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Truth, Vent & Dare Screen */}
+            {gameState.type === 'truthvent' && (
+              <div className="game-deck-wrapper">
+                <div className="truthvent-deck">
+                  <div className="game-deck-header">
+                    <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
+                      🎭 TRUTH, VENT & DARE
+                    </span>
+                    <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--accent-amber)' }}>
+                      {gameState.prompt?.type || 'Vent'}
+                    </span>
+                  </div>
+
+                  <div className="truthvent-card-content">
+                    <span className="truthvent-prompt-label">Prompt for the Room:</span>
+                    <p className="truthvent-prompt-body">
+                      "{gameState.prompt?.text || 'What campus rumor drove you crazy recently?'}"
+                    </p>
+                  </div>
+
+                  <div className="truthvent-actions-row">
+                    <button className="btn-pill-primary" onClick={handleNextTruthVent}>
+                      🎲 Next Prompt
+                    </button>
+                    <button className="btn-pill-secondary" onClick={handleSharePromptToChat} title="Send prompt to chat alongside">
+                      📢 Share to Chat ➔
+                    </button>
+                  </div>
+
+                  <div className="truthvent-hint">
+                    Respond, debate, or confess anonymously in the chat right beside this card!
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -658,25 +921,16 @@ export default function RoomView({
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
                       {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    {m.isEphemeral && (
-                      <span style={{ color: 'var(--accent-rose)', fontSize: '0.7rem', fontWeight: 700 }}>
-                        🔥 Dissolving (12s)
-                      </span>
-                    )}
                   </div>
-                  <div className="chat-bubble-content">
-                    {m.text}
-                  </div>
-
-                  {/* Burning Progress Bar for Dissolving Messages */}
-                  {m.isEphemeral && <div className="ephemeral-burn-bar"></div>}
+                  <div className="chat-bubble-text">{m.text}</div>
+                  {m.isEphemeral && <div className="ephemeral-burn-bar" />}
                 </div>
               );
             })}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Typing Indicator */}
+          {/* Typing Indicator Bar */}
           <div className="typing-indicator-bar">
             {typingUsers.size > 0 && (
               <span>💬 {Array.from(typingUsers).join(', ')} is typing...</span>
@@ -724,235 +978,6 @@ export default function RoomView({
           </form>
         </section>
       </main>
-
-      {/* ============================================================
-          INTERACTIVE MINI-GAMES POP-UP MODAL (All 5 Games)
-          ============================================================ */}
-      {isGameModalOpen && (
-        <div className="game-modal-backdrop" onClick={() => setIsGameModalOpen(false)}>
-          <div className="game-modal-container" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="game-modal-header">
-              <div className="game-modal-title-row">
-                <span className="game-modal-title">🎮 Multiplayer Mini-Games</span>
-                {gameState.isActive && (
-                  <span className="badge-pill" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)' }}>
-                    ⏱️ {gameState.timeLeft}s left
-                  </span>
-                )}
-              </div>
-              <button className="game-modal-close-btn" onClick={() => setIsGameModalOpen(false)}>✕</button>
-            </div>
-
-            {/* Game Selector Tabs */}
-            <div className="game-modal-tabs">
-              {[
-                { id: 'scribble', label: '🎨 Scribble' },
-                { id: 'trivia', label: '⚡ Trivia Blitz' },
-                { id: 'wordchain', label: '🔗 Word Chain' },
-                { id: 'emojipop', label: '💥 Emoji Pop' },
-                { id: 'truthvent', label: '🎭 Truth & Vent' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  className={`filter-tab-pill ${gameState.type === tab.id ? 'active' : ''}`}
-                  onClick={() => handleSwitchGame(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Modal Body: Active Game Interactive Screen */}
-            <div className="game-modal-body">
-              {/* 1. Scribble Pop-up View */}
-              {gameState.type === 'scribble' && (
-                <div className="game-screen-box">
-                  <div className="game-card-banner">
-                    <span className="badge-pill" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)' }}>
-                      🎨 CAMPUS SCRIBBLE
-                    </span>
-                    <button className="btn-pill-secondary" onClick={handleToggleGame}>
-                      {gameState.isActive ? '⏸️ Stop Game' : '▶️ Start Round'}
-                    </button>
-                  </div>
-
-                  {gameState.isActive ? (
-                    <div className="scribble-interactive-prompt">
-                      {gameState.isDrawer ? (
-                        <div>
-                          <p style={{ fontSize: '0.85rem', color: 'var(--accent-amber)' }}>YOU ARE THE DRAWER! SKETCH THIS ON THE CANVAS:</p>
-                          <h2 className="secret-word-display">{gameState.word}</h2>
-                          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Peers are guessing your sketch in chat!</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>GUESS THE DRAWING IN CHAT:</p>
-                          <h2 className="secret-word-display">{gameState.maskedWord}</h2>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                      <p style={{ color: 'var(--text-secondary)', marginBottom: '14px' }}>
-                        Speed Pictionary! One player draws on the canvas while everyone else races to guess the word in chat.
-                      </p>
-                      <button className="btn-pill-primary" onClick={handleToggleGame}>
-                        🚀 Start Scribble Round
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 2. Trivia Blitz Pop-up View */}
-              {gameState.type === 'trivia' && (
-                <div className="game-screen-box">
-                  <div className="game-card-banner">
-                    <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
-                      ⚡ TRIVIA BLITZ (14s)
-                    </span>
-                    <button className="btn-pill-secondary" onClick={handleToggleGame}>
-                      {gameState.isActive ? 'Next Question ➔' : 'Start Trivia'}
-                    </button>
-                  </div>
-
-                  <h3 className="trivia-question-text">
-                    {gameState.question || "Ready for campus & tech trivia showdown?"}
-                  </h3>
-
-                  <div className="trivia-options-grid">
-                    {(gameState.options && gameState.options.length > 0 ? gameState.options : [
-                      "Option A", "Option B", "Option C", "Option D"
-                    ]).map((opt, i) => {
-                      const isSelected = gameState.selectedAnswerIdx === i;
-                      const isResolved = gameState.resolvedAnswer !== null;
-                      const isCorrect = isResolved && gameState.resolvedAnswer.correctIndex === i;
-
-                      let btnClass = 'trivia-option-btn';
-                      if (isSelected) btnClass += ' selected';
-                      if (isCorrect) btnClass += ' correct';
-
-                      return (
-                        <button
-                          key={i}
-                          className={btnClass}
-                          onClick={() => handleTriviaAnswer(i)}
-                          disabled={gameState.selectedAnswerIdx !== null}
-                        >
-                          <span className="opt-letter">{['A', 'B', 'C', 'D'][i]}</span>
-                          <span>{opt}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 3. Word Chain Pop-up View */}
-              {gameState.type === 'wordchain' && (
-                <div className="game-screen-box">
-                  <div className="game-card-banner">
-                    <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-sage)' }}>
-                      🔗 RAPID WORD CHAIN (Streak: {gameState.streakCount}x)
-                    </span>
-                    <button className="btn-pill-secondary" onClick={handleToggleGame}>
-                      Reset Chain
-                    </button>
-                  </div>
-
-                  <div className="wordchain-status-box">
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>LAST WORD PLAYED:</div>
-                    <div className="wordchain-last-word">{gameState.lastWord || 'Campus'}</div>
-                    <div className="wordchain-prompt">
-                      Your word must begin with: <strong className="chain-letter">"{gameState.currentLetter || 'C'}"</strong>
-                    </div>
-                  </div>
-
-                  <form className="wordchain-form" onSubmit={handleWordChainSubmit}>
-                    <input
-                      type="text"
-                      className="wordchain-input"
-                      placeholder={`Enter word starting with "${gameState.currentLetter || 'C'}"...`}
-                      value={gameState.wordChainInput || ''}
-                      onChange={(e) => setGameState(prev => ({ ...prev, wordChainInput: e.target.value }))}
-                      autoFocus
-                    />
-                    <button type="submit" className="btn-pill-primary">Submit Word</button>
-                  </form>
-                </div>
-              )}
-
-              {/* 4. Emoji Pop Reflex Pop-up View */}
-              {gameState.type === 'emojipop' && (
-                <div className="game-screen-box">
-                  <div className="game-card-banner">
-                    <span className="badge-pill" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)' }}>
-                      💥 EMOJI POP REFLEX
-                    </span>
-                    <button className="btn-pill-secondary" onClick={handleToggleGame}>
-                      {gameState.isActive ? 'Pause' : 'Start Pop'}
-                    </button>
-                  </div>
-
-                  <div className="emojipop-arena-field">
-                    {(gameState.targets || []).map(target => (
-                      <div
-                        key={target.id}
-                        className="emojipop-target-item"
-                        style={{ left: `${target.x}%`, top: `${target.y}%`, fontSize: `${target.size}px` }}
-                        onClick={() => handlePopTarget(target)}
-                      >
-                        <span>{target.emoji}</span>
-                        <span className="target-points-badge">+{target.points}</span>
-                      </div>
-                    ))}
-                    {(!gameState.targets || gameState.targets.length === 0) && (
-                      <div style={{ position: 'absolute', top: '45%', left: '0', right: '0', textAlign: 'center', color: 'var(--text-muted)' }}>
-                        Click Start to spawn fast target emojis!
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* 5. Truth, Vent & Dare Pop-up View */}
-              {gameState.type === 'truthvent' && (
-                <div className="game-screen-box">
-                  <div className="game-card-banner">
-                    <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
-                      🎭 TRUTH, VENT & DARE
-                    </span>
-                    <button className="btn-pill-primary" onClick={handleNextTruthVent}>
-                      Next Prompt ➔
-                    </button>
-                  </div>
-
-                  <div className="truthvent-card-prompt">
-                    <span className="truthvent-type-tag">{gameState.prompt?.type || 'Vent'}</span>
-                    <p className="truthvent-prompt-text">{gameState.prompt?.text || 'What is your biggest campus confession?'}</p>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      Answer or react in the chat on the right!
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Live Game Scores Display */}
-              {gameState.scores && Object.keys(gameState.scores).length > 0 && (
-                <div className="modal-scores-row">
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>🏆 Leaderboard:</span>
-                  {Object.entries(gameState.scores).map(([name, score]) => (
-                    <span key={name} className="score-pill">
-                      {name}: {score} pts
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

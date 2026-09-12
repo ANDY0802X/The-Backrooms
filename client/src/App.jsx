@@ -94,46 +94,52 @@ export default function App() {
   };
 
   return (
-    <>
-      {/* Main View Router */}
+    <div className="app-root-shell">
+      {/* Main View Router with Fluid Transitions */}
       {currentView === 'landing' && (
-        <Landing
-          onEnterLounge={() => setCurrentView('lobby')}
-          onCreateLoungeDirect={() => setCurrentView('lobby')}
-          onJoinByCode={handleJoinRoomByCode}
-          userProfile={userProfile}
-          onUpdateUserProfile={setUserProfile}
-          onRerollProfile={handleRerollProfile}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
+        <div key="view-landing" className="view-stage-wrapper">
+          <Landing
+            onEnterLounge={() => setCurrentView('lobby')}
+            onCreateLoungeDirect={() => setCurrentView('lobby')}
+            onJoinByCode={handleJoinRoomByCode}
+            userProfile={userProfile}
+            onUpdateUserProfile={setUserProfile}
+            onRerollProfile={handleRerollProfile}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
       )}
 
       {currentView === 'lobby' && (
-        <Lobby
-          rooms={rooms}
-          userProfile={userProfile}
-          onUpdateUserProfile={setUserProfile}
-          onRerollProfile={handleRerollProfile}
-          onJoinRoom={handleJoinRoom}
-          onJoinRoomByCode={handleJoinRoomByCode}
-          onCreateRoom={handleCreateRoom}
-          onBackToLanding={() => setCurrentView('landing')}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
+        <div key="view-lobby" className="view-stage-wrapper">
+          <Lobby
+            rooms={rooms}
+            userProfile={userProfile}
+            onUpdateUserProfile={setUserProfile}
+            onRerollProfile={handleRerollProfile}
+            onJoinRoom={handleJoinRoom}
+            onJoinRoomByCode={handleJoinRoomByCode}
+            onCreateRoom={handleCreateRoom}
+            onBackToLanding={() => setCurrentView('landing')}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
       )}
 
       {currentView === 'room' && currentRoomId && (
-        <RoomView
-          socket={socketRef.current}
-          roomId={currentRoomId}
-          userProfile={userProfile}
-          onLeaveRoom={handleLeaveRoom}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
+        <div key={`view-room-${currentRoomId}`} className="view-stage-wrapper">
+          <RoomView
+            socket={socketRef.current}
+            roomId={currentRoomId}
+            userProfile={userProfile}
+            onLeaveRoom={handleLeaveRoom}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
       )}
-    </>
+    </div>
   );
 }
