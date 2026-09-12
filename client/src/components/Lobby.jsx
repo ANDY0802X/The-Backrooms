@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Lobby.css';
 import { sounds } from '../utils/sound';
-import Reveal from './Reveal';
 
 const CATEGORIES = ['All', 'General', 'Study', 'Rant', 'Art', 'Mini-Game'];
 
@@ -30,7 +29,6 @@ export default function Lobby({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [joinCodeInput, setJoinCodeInput] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
 
   // New room modal state
@@ -43,11 +41,13 @@ export default function Lobby({
 
   const filteredRooms = rooms.filter(room => {
     const matchesCat = selectedCategory === 'All' || room.category === selectedCategory;
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return matchesCat;
     const matchesSearch =
-      room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      room.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (room.code && room.code.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (room.tags && room.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+      room.name.toLowerCase().includes(query) ||
+      room.description.toLowerCase().includes(query) ||
+      (room.code && room.code.toLowerCase().includes(query.replace('#', ''))) ||
+      (room.tags && room.tags.some(t => t.toLowerCase().includes(query.replace('#', ''))));
     return matchesCat && matchesSearch;
   });
 
@@ -72,12 +72,17 @@ export default function Lobby({
     setNewRoomTags('');
   };
 
-  const handleCodeSubmit = (e) => {
-    e.preventDefault();
-    if (!joinCodeInput.trim()) return;
-    sounds.playSuccess();
-    if (typeof onJoinRoomByCode === 'function') {
-      onJoinRoomByCode(joinCodeInput.trim().toUpperCase());
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      const cleaned = searchQuery.trim().replace('#', '').toUpperCase();
+      const directMatch = rooms.find(r => r.code === cleaned || r.id === cleaned.toLowerCase());
+      if (directMatch) {
+        sounds.playChime();
+        onJoinRoom(directMatch.id);
+      } else if (typeof onJoinRoomByCode === 'function') {
+        sounds.playSuccess();
+        onJoinRoomByCode(cleaned);
+      }
     }
   };
 
@@ -86,13 +91,13 @@ export default function Lobby({
       navigator.clipboard.writeText(code);
       sounds.playPop();
       setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
+      setTimeout(() => setCopiedCode(null), 1800);
     } catch (e) {}
   };
 
-  const getGameLabel = (gameType) => {
+  const getGameBadge = (gameType) => {
     switch (gameType) {
-      case 'trivia': return '⚡ Trivia Blitz';
+      case 'trivia': return '⚡ Trivia';
       case 'wordchain': return '🔗 Word Chain';
       case 'emojipop': return '💥 Emoji Pop';
       case 'truthvent': return '🎭 Truth & Vent';
@@ -102,405 +107,325 @@ export default function Lobby({
   };
 
   return (
-    <div className="lobby-container">
-      {/* Header */}
-      <header className="lobby-header-bar">
-        <div className="lobby-brand hover-lift" onClick={onBackToLanding} title="Back to home">
-          <div className="brand-icon-box" style={{ width: '32px', height: '32px', fontSize: '1rem' }}>🌌</div>
-          <h2 className="brand-title">TheBackrooms</h2>
+    <div className="lobby-shell">
+      {/* Top Header */}
+      <header className="lobby-top-bar">
+        <div className="lobby-brand-group" onClick={onBackToLanding} title="Back to home">
+          <span className="brand-pulse-dot"></span>
+          <span className="brand-logo-text">TheBackrooms</span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <motion.button
-            whileHover={{ scale: 1.05, y: -1 }}
-            whileTap={{ scale: 0.94 }}
-            className="btn-pill-secondary"
+        {/* Identity Pill (Compact Linear Style) */}
+        <div className="lobby-user-pill">
+          <span className="user-avatar-tag">{userProfile?.avatar || '😴'}</span>
+          <input
+            type="text"
+            className="user-name-inline-input"
+            value={userProfile?.name !== undefined ? userProfile.name : ''}
+            onChange={(e) => onUpdateUserProfile({ ...userProfile, name: e.target.value })}
+            placeholder="Set alias..."
+            title="Edit alias"
+            maxLength={20}
+          />
+          <button
+            type="button"
+            className="user-reroll-btn"
+            onClick={() => {
+              sounds.playBoing();
+              onRerollProfile();
+            }}
+            title="Reroll identity"
+            aria-label="Reroll identity"
+          >
+            🎲
+          </button>
+        </div>
+
+        {/* Global Action Controls */}
+        <div className="lobby-nav-controls">
+          <button
+            type="button"
+            className="lobby-quiet-btn"
             onClick={() => {
               sounds.playPop();
               onToggleTheme();
             }}
+            title="Toggle theme"
           >
-            {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05, y: -1 }}
-            whileTap={{ scale: 0.94 }}
-            className="btn-pill-secondary"
-            onClick={onBackToLanding}
-            title="Back to landing"
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+          <button
+            type="button"
+            className="lobby-quiet-btn"
+            onClick={() => {
+              if (rooms.length > 0) {
+                const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
+                sounds.playChime();
+                onJoinRoom(randomRoom.id);
+              }
+            }}
+            title="Join random room"
           >
-            ← Back
-          </motion.button>
+            ⚡ Quick Match
+          </button>
+          <button
+            type="button"
+            className="lobby-primary-btn"
+            onClick={() => {
+              sounds.playPop();
+              setIsModalOpen(true);
+            }}
+          >
+            <span>+ Create Lounge</span>
+          </button>
         </div>
       </header>
 
-      {/* Identity Card */}
-      <Reveal index={0}>
-        <section className="identity-banner glass-panel hover-lift" style={{ '--user-color': userProfile?.color || '#8b5cf6' }}>
-          <div className="identity-info">
-            <div className="identity-avatar-box">
-              <span>{userProfile?.avatar || '😴'}</span>
-              <span className="identity-avatar-badge"></span>
-            </div>
-
-            <div className="identity-details">
-              <div className="identity-name-row">
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Alias:</span>
-                <input
-                  type="text"
-                  className="identity-name-input"
-                  placeholder="Enter your alias..."
-                  value={userProfile?.name !== undefined ? userProfile.name : ''}
-                  onChange={(e) => onUpdateUserProfile({ ...userProfile, name: e.target.value })}
-                  title="Click to edit your alias"
-                />
-              </div>
-              <span className="identity-mood">{userProfile?.mood || 'Decompressing in TheBackrooms'}</span>
-            </div>
-          </div>
-
-          <div className="identity-actions">
-            <motion.button
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-pill-secondary"
-              onClick={() => {
-                sounds.playBoing();
-                onRerollProfile();
-              }}
-            >
-              🎲 Re-Roll Alias
-            </motion.button>
-            <span className="badge-pill hover-lift" style={{ background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-sage)' }}>
-              🔒 Ephemeral ID
-            </span>
-          </div>
-        </section>
-      </Reveal>
-
-      {/* Code Join Bar */}
-      <Reveal index={1}>
-        <section className="join-code-strip glass-panel hover-lift">
-          <form className="join-code-form" onSubmit={handleCodeSubmit}>
-            <div className="join-code-label">
-              <span className="key-icon">🔑</span>
-              <span>Join Custom Room:</span>
-            </div>
-            <input
-              type="text"
-              className="join-code-input"
-              placeholder="Enter Room Code (e.g. COFFEE, DOODLE)..."
-              value={joinCodeInput}
-              onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-              maxLength={12}
-            />
-            <motion.button
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.96 }}
-              type="submit"
-              className="btn-pill-primary"
-              style={{ padding: '8px 20px' }}
-            >
-              <span>Join Room</span>
-              <span>➔</span>
-            </motion.button>
-          </form>
-        </section>
-      </Reveal>
-
-      {/* Controls Bar */}
-      <section className="lobby-controls-section">
-        <div className="controls-top-row">
-          <div className="search-box-wrapper hover-lift">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search lounges by name, code, topic or tag..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <motion.button
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-pill-secondary"
-              onClick={() => {
-                if (rooms.length > 0) {
-                  const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
-                  sounds.playChime();
-                  onJoinRoom(randomRoom.id);
-                }
-              }}
-            >
-              ⚡ Quick Match
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-pill-primary"
-              onClick={() => {
-                sounds.playPop();
-                setIsModalOpen(true);
-              }}
-            >
-              ➕ Create Lounge
-            </motion.button>
-          </div>
+      {/* Main Filter & Search Toolbar */}
+      <section className="lobby-toolbar">
+        {/* Segmented Category Control (Linear/Notion Style) */}
+        <div className="category-segmented-strip font-mono">
+          {CATEGORIES.map(cat => {
+            const count = cat === 'All' ? rooms.length : rooms.filter(r => r.category === cat).length;
+            const isActive = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                className={`segmented-tab ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  sounds.playPop();
+                }}
+              >
+                <span>{cat}</span>
+                <span className="segmented-count">{count}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Category Filter Tabs */}
-        <div className="category-filter-bar">
-          {CATEGORIES.map(cat => (
-            <motion.button
-              key={cat}
-              whileHover={{ scale: 1.04, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className={`filter-tab-pill ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedCategory(cat);
-                sounds.playPop();
-              }}
+        {/* Search & Code Input Combined */}
+        <div className="search-code-field">
+          <span className="search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            className="search-code-input"
+            placeholder="Search rooms by name, topic, or enter #CODE..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
+          {searchQuery.trim() && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchQuery('')}
             >
-              {cat === 'All' && '🌐'}
-              {cat === 'General' && '🛋️'}
-              {cat === 'Study' && '📚'}
-              {cat === 'Rant' && '📢'}
-              {cat === 'Art' && '🎨'}
-              {cat === 'Mini-Game' && '🎮'}
-              <span>{cat}</span>
-              <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>
-                ({cat === 'All' ? rooms.length : rooms.filter(r => r.category === cat).length})
-              </span>
-            </motion.button>
-          ))}
+              ✕
+            </button>
+          )}
         </div>
       </section>
 
-      {/* Room Cards Grid with Staggered Reveals */}
-      <main className="room-grid">
-        {filteredRooms.map((room, index) => {
-          const roomCode = room.code || room.id.replace('lounge-', '').slice(0, 6).toUpperCase();
-          return (
-            <Reveal key={room.id} index={index}>
-              <motion.div
-                whileHover={{ y: -4, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
-                className="glass-panel-interactive room-card hover-lift"
-              >
-                <div className="room-card-top">
-                  <span className="room-card-game-badge hover-lift">
-                    {getGameLabel(room.selectedGame)}
-                  </span>
-                  <div className="room-user-badge hover-lift" title="Live active presence ping">
-                    <span className="pulsing-ping-dot"></span>
-                    <span>{room.userCount || 1} online</span>
-                  </div>
-                </div>
-
-                {/* Room Code Badge */}
-                <div className="room-code-tag-row">
-                  <span className="room-code-display">Code: #{roomCode}</span>
-                  <motion.button
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
-                    type="button"
-                    className="room-code-copy-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCopyCode(roomCode);
-                    }}
-                    title="Copy room code"
-                  >
-                    {copiedCode === roomCode ? '✓ Copied' : '📋 Copy'}
-                  </motion.button>
-                </div>
-
-                <div>
-                  <h3 className="room-card-title">{room.name}</h3>
-                  <p className="room-card-desc">{room.description}</p>
-                </div>
-
-                {room.tags && room.tags.length > 0 && (
-                  <div className="room-tag-pills">
-                    {room.tags.map((tag, i) => (
-                      <span key={i} className="room-tag hover-lift">#{tag}</span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="room-card-footer">
-                  <motion.button
-                    whileHover={{ scale: 1.02, y: -1.5 }}
-                    whileTap={{ scale: 0.96 }}
-                    className="btn-pill-primary"
-                    style={{ width: '100%', justifyContent: 'center', padding: '10px' }}
-                    onClick={() => {
-                      sounds.playChime();
-                      onJoinRoom(room.id);
-                    }}
-                  >
-                    <span>Step Inside</span>
-                    <span>➔</span>
-                  </motion.button>
-                </div>
-              </motion.div>
-            </Reveal>
-          );
-        })}
-
-        {filteredRooms.length === 0 && (
-          <div className="glass-panel" style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center' }}>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-              No lounges match "{searchQuery}".
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
-              className="btn-pill-primary"
+      {/* Rooms Grid: Flat, Quiet Surfaces with 1px Hairline Borders */}
+      <main className="rooms-container">
+        {filteredRooms.length === 0 ? (
+          <div className="rooms-empty-state">
+            <p className="empty-title">No active lounges match your search.</p>
+            <p className="empty-sub">Create a new lounge or press Enter to join with code #{searchQuery.replace('#', '').toUpperCase()}.</p>
+            <button
+              type="button"
+              className="lobby-primary-btn"
+              style={{ marginTop: '16px' }}
               onClick={() => setIsModalOpen(true)}
             >
-              Create this Lounge ✨
-            </motion.button>
+              Create Lounge
+            </button>
+          </div>
+        ) : (
+          <div className="rooms-grid">
+            {filteredRooms.map((room) => {
+              const roomCode = room.code || room.id.replace('lounge-', '').slice(0, 6).toUpperCase();
+              return (
+                <div
+                  key={room.id}
+                  className="room-flat-card"
+                  onClick={() => {
+                    sounds.playChime();
+                    onJoinRoom(room.id);
+                  }}
+                >
+                  {/* Card Meta Top */}
+                  <div className="card-top-meta">
+                    <span className="card-game-pill font-mono">
+                      {getGameBadge(room.selectedGame)}
+                    </span>
+                    <div className="card-presence-indicator font-mono">
+                      <span className="card-presence-dot"></span>
+                      <span>{room.userCount || 1} online</span>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="card-body">
+                    <div className="card-title-row">
+                      <h3 className="card-title">{room.name}</h3>
+                      <button
+                        type="button"
+                        className="card-code-pill font-mono"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyCode(roomCode);
+                        }}
+                        title="Copy room code"
+                      >
+                        {copiedCode === roomCode ? '✓ Copied' : `#${roomCode}`}
+                      </button>
+                    </div>
+
+                    <p className="card-desc">{room.description}</p>
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="card-bottom">
+                    <div className="card-tags-list font-mono">
+                      {room.tags && room.tags.map((tag, i) => (
+                        <span key={i} className="card-tag">#{tag}</span>
+                      ))}
+                    </div>
+                    <span className="card-action-hint font-mono">Join ➔</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
 
-      {/* Create Modal with Framer-Motion Entrance & Exit */}
+      {/* Minimal Create Lounge Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <motion.div
-            className="modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setIsModalOpen(false)}
-          >
+          <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
             <motion.div
-              className="modal-card"
-              initial={{ opacity: 0, scale: 0.94, y: 14 }}
+              initial={{ opacity: 0, scale: 0.97, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+              exit={{ opacity: 0, scale: 0.97, y: 12 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="create-modal-card"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="modal-header">
-                <h3 className="modal-title">Create a Lounge</h3>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="btn-pill-icon"
+                <div>
+                  <h2 className="modal-title">Create Decompression Lounge</h2>
+                  <p className="modal-subhead">Ephemeral room • Disappears completely when empty</p>
+                </div>
+                <button
+                  type="button"
+                  className="modal-close-btn"
                   onClick={() => setIsModalOpen(false)}
                 >
                   ✕
-                </motion.button>
+                </button>
               </div>
 
-              <form onSubmit={handleCreateSubmit}>
-                <div className="modal-form-group">
-                  <label className="modal-label">Lounge Name *</label>
+              <form onSubmit={handleCreateSubmit} className="modal-form">
+                <div className="modal-field">
+                  <label className="field-label">Lounge Name *</label>
                   <input
                     type="text"
                     className="modal-input"
-                    placeholder="e.g. 3AM Chill Corner, Late Night Cram"
+                    placeholder="e.g. Midnight Exam Rant, Lofi Chillout"
                     value={newRoomName}
                     onChange={(e) => setNewRoomName(e.target.value)}
                     required
                     autoFocus
+                    maxLength={36}
                   />
                 </div>
 
-                <div className="modal-form-group">
-                  <label className="modal-label">Custom Room Code (Optional)</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="e.g. COZY42 (or leave blank to auto-generate)"
-                    value={newRoomCode}
-                    onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
-                    maxLength={10}
-                  />
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                    Friends can enter this code from the home page to join your room immediately.
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div className="modal-form-group">
-                    <label className="modal-label">Category</label>
+                <div className="modal-row-grid">
+                  <div className="modal-field">
+                    <label className="field-label">Category</label>
                     <select
-                      className="modal-input"
+                      className="modal-select"
                       value={newRoomCategory}
                       onChange={(e) => setNewRoomCategory(e.target.value)}
                     >
-                      <option value="General">🛋️ General Chill</option>
-                      <option value="Study">📚 Study / Focus</option>
-                      <option value="Rant">📢 Anonymous Vent</option>
-                      <option value="Art">🎨 Art / Canvas</option>
-                      <option value="Mini-Game">🎮 Multiplayer Games</option>
-                    </select>
-                  </div>
-
-                  <div className="modal-form-group">
-                    <label className="modal-label">Multiplayer Mini-Game</label>
-                    <select
-                      className="modal-input"
-                      value={newRoomGame}
-                      onChange={(e) => setNewRoomGame(e.target.value)}
-                    >
-                      {GAME_OPTIONS.map(g => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
+                      {CATEGORIES.filter(c => c !== 'All').map(c => (
+                        <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
                   </div>
+
+                  <div className="modal-field">
+                    <label className="field-label font-mono">Room Code (Optional)</label>
+                    <input
+                      type="text"
+                      className="modal-input font-mono"
+                      placeholder="e.g. COFFEE"
+                      value={newRoomCode}
+                      onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
+                      maxLength={10}
+                    />
+                  </div>
                 </div>
 
-                <div className="modal-form-group">
-                  <label className="modal-label">Description (Optional)</label>
+                <div className="modal-field">
+                  <label className="field-label">Multiplayer Mini-Game</label>
+                  <select
+                    className="modal-select"
+                    value={newRoomGame}
+                    onChange={(e) => setNewRoomGame(e.target.value)}
+                  >
+                    {GAME_OPTIONS.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="modal-field">
+                  <label className="field-label">Description (Optional)</label>
                   <input
                     type="text"
                     className="modal-input"
-                    placeholder="A safe space for mid-terms ranting..."
+                    placeholder="Short room vibe..."
                     value={newRoomDesc}
                     onChange={(e) => setNewRoomDesc(e.target.value)}
+                    maxLength={80}
                   />
                 </div>
 
-                <div className="modal-form-group">
-                  <label className="modal-label">Tags (comma separated)</label>
+                <div className="modal-field">
+                  <label className="field-label font-mono">Hashtags (Comma-separated)</label>
                   <input
                     type="text"
-                    className="modal-input"
-                    placeholder="exams, chill, coffee, lofi"
+                    className="modal-input font-mono"
+                    placeholder="exams, caffeine, insomnia"
                     value={newRoomTags}
                     onChange={(e) => setNewRoomTags(e.target.value)}
+                    maxLength={50}
                   />
                 </div>
 
-                <div className="modal-actions">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.96 }}
+                <div className="modal-actions-row">
+                  <button
                     type="button"
-                    className="btn-pill-secondary"
+                    className="modal-cancel-btn"
                     onClick={() => setIsModalOpen(false)}
                   >
                     Cancel
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02, y: -1 }}
-                    whileTap={{ scale: 0.96 }}
+                  </button>
+                  <button
                     type="submit"
-                    className="btn-pill-primary"
+                    className="lobby-primary-btn"
                   >
-                    Create & Enter ➔
-                  </motion.button>
+                    Create & Step Inside ➔
+                  </button>
                 </div>
               </form>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
