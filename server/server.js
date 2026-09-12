@@ -138,117 +138,9 @@ const TRUTH_VENT_DARE_PROMPTS = [
 const EMOJI_POP_TARGETS = ['🎯', '⭐', '🔥', '💎', '🦄', '🍕', '🎉', '⚡', '🐱', '🚀'];
 
 // ==========================================
-// 2. ROOM REGISTRY
+// 2. ROOM REGISTRY (Dynamic, 100% Ephemeral - 0 default/test rooms)
 // ==========================================
 const rooms = new Map();
-
-const defaultLounges = [
-  {
-    id: 'lounge-midnight-coffee',
-    code: 'COFFEE',
-    name: 'Midnight Espresso ☕',
-    category: 'Study',
-    selectedGame: 'scribble',
-    description: 'Quiet crammers & 2AM chill lo-fi energy. Synchronized canvas & cozy chat.',
-    tags: ['Quiet', 'Lo-Fi', 'Study'],
-    created: Date.now(),
-    isPermanent: true
-  },
-  {
-    id: 'lounge-scribble-arena',
-    code: 'DOODLE',
-    name: 'Campus Scribble Arena 🎨',
-    category: 'Mini-Game',
-    selectedGame: 'scribble',
-    description: 'Speed Pictionary rounds with campus prompts. Guess fast & score points!',
-    tags: ['Drawing', 'Fast-Paced', 'Pictionary'],
-    created: Date.now(),
-    isPermanent: true
-  },
-  {
-    id: 'lounge-trivia-blitz',
-    code: 'TRIVIA',
-    name: 'Campus Trivia Blitz ⚡',
-    category: 'Mini-Game',
-    selectedGame: 'trivia',
-    description: 'Rapid-fire campus & tech trivia showdown. 14 seconds per question!',
-    tags: ['Trivia', 'Buzzer', 'Challenge'],
-    created: Date.now(),
-    isPermanent: true
-  },
-  {
-    id: 'lounge-word-chain',
-    code: 'CHAINS',
-    name: 'Rapid Word Chain 🔗',
-    category: 'Mini-Game',
-    selectedGame: 'wordchain',
-    description: 'Keep the word chain alive without repeating or timing out. Build huge combos!',
-    tags: ['WordGame', 'Speed', 'Combo'],
-    created: Date.now(),
-    isPermanent: true
-  },
-  {
-    id: 'lounge-emoji-pop',
-    code: 'ARCADE',
-    name: 'Emoji Pop Reflex 💥',
-    category: 'Mini-Game',
-    selectedGame: 'emojipop',
-    description: 'Fast-paced reaction arcade! Click the popping target emojis before they vanish.',
-    tags: ['Arcade', 'Reflex', 'Pop'],
-    created: Date.now(),
-    isPermanent: true
-  },
-  {
-    id: 'lounge-truth-vent',
-    code: 'CONFES',
-    name: 'Truth, Vent & Dare 🎭',
-    category: 'Rant',
-    selectedGame: 'truthvent',
-    description: 'Zero-filter campus confessionals, cathartic vents, and hilarious dares.',
-    tags: ['Confessions', 'Venting', 'Cathartic'],
-    created: Date.now(),
-    isPermanent: true
-  }
-];
-
-// Initialize default rooms
-defaultLounges.forEach(lounge => {
-  rooms.set(lounge.id, {
-    ...lounge,
-    users: new Map(),
-    canvasStrokes: [],
-    messages: [],
-    game: {
-      type: lounge.selectedGame || 'scribble',
-      isActive: false,
-      scores: {},
-      timerInterval: null,
-      timeLeft: 30,
-
-      // Scribble
-      currentDrawer: null,
-      currentWord: '',
-      revealedWord: '',
-      hasGuessed: new Set(),
-
-      // Trivia
-      triviaQuestion: null,
-      triviaAnswers: new Map(),
-
-      // Word Chain
-      currentLetter: 'C',
-      lastWord: 'Campus',
-      wordHistory: ['Campus'],
-      streakCount: 1,
-
-      // Truth/Vent
-      currentPrompt: null,
-
-      // Emoji Pop
-      emojiTargets: []
-    }
-  });
-});
 
 // ==========================================
 // 2. PROXIMITY & GEOLOCATION ZERO-KNOWLEDGE ENGINE
@@ -327,13 +219,6 @@ app.get('/api/rooms', (req, res) => {
 // ==========================================
 // 3. MULTI-GAME ENGINE HANDLERS
 // ==========================================
-
-function clearRoomTimer(room) {
-  if (room.game.timerInterval) {
-    clearInterval(room.game.timerInterval);
-    room.game.timerInterval = null;
-  }
-}
 
 // 1. Scribble Game
 function startScribbleGame(roomId) {
@@ -711,6 +596,105 @@ function startEmojiPopGame(roomId) {
       }, 5000);
     }
   }, 1000);
+}
+
+function clearRoomTimer(room) {
+  if (!room || !room.game) return;
+  if (room.game.timerInterval) {
+    clearInterval(room.game.timerInterval);
+    room.game.timerInterval = null;
+  }
+  if (room.game.countdownInterval) {
+    clearInterval(room.game.countdownInterval);
+    room.game.countdownInterval = null;
+  }
+}
+
+function startCountdownAndLaunch(roomId, gameType) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+
+  clearRoomTimer(room);
+  room.game.isActive = false;
+  room.game.isCountdown = true;
+  room.game.countdownSeconds = 5;
+  room.game.type = gameType;
+
+  io.to(roomId).emit('game_countdown_start', {
+    seconds: 5,
+    gameType,
+    gameName: getGameDisplayName(gameType)
+  });
+
+  const countdownMsg = {
+    id: `sys-cd-${Date.now()}`,
+    sender: { name: '⏱️ Soulnook Arena', color: '#f59e0b', avatar: '🎮' },
+    text: `Get ready! Starting ${getGameDisplayName(gameType)} in 5 seconds...`,
+    timestamp: Date.now(),
+    isSystem: true
+  };
+  room.messages.push(countdownMsg);
+  io.to(roomId).emit('new_message', countdownMsg);
+
+  let remaining = 5;
+  room.game.countdownInterval = setInterval(() => {
+    remaining -= 1;
+    if (!rooms.has(roomId) || !room.game || !room.game.isCountdown) {
+      if (room.game?.countdownInterval) clearInterval(room.game.countdownInterval);
+      return;
+    }
+
+    if (remaining > 0) {
+      room.game.countdownSeconds = remaining;
+      io.to(roomId).emit('game_countdown_tick', { seconds: remaining, gameType });
+    } else {
+      clearInterval(room.game.countdownInterval);
+      room.game.countdownInterval = null;
+      room.game.isCountdown = false;
+      io.to(roomId).emit('game_countdown_end', { gameType });
+      launchGame(roomId, gameType);
+    }
+  }, 1000);
+}
+
+function resolvePoll(roomId, pollId) {
+  const room = rooms.get(roomId);
+  if (!room || !room.activePoll || room.activePoll.id !== pollId || room.activePoll.isResolved) return;
+
+  const poll = room.activePoll;
+  poll.isResolved = true;
+
+  const passed = poll.yesCount >= poll.noCount && poll.yesCount >= 1;
+
+  io.to(roomId).emit('poll_resolved', {
+    pollId,
+    passed,
+    yesCount: poll.yesCount,
+    noCount: poll.noCount,
+    targetGame: poll.targetGame,
+    gameName: poll.gameName
+  });
+
+  const resultMsg = {
+    id: `sys-poll-res-${Date.now()}`,
+    sender: { name: '📊 Lounge Game Poll', color: passed ? '#10b981' : '#ef4444', avatar: passed ? '✅' : '❌' },
+    text: passed
+      ? `Vote Passed (${poll.yesCount} Yes vs ${poll.noCount} No)! Switching to ${poll.gameName} in 5s...`
+      : `Vote Rejected (${poll.yesCount} Yes vs ${poll.noCount} No). Keeping current game.`,
+    timestamp: Date.now(),
+    isSystem: true
+  };
+
+  room.messages.push(resultMsg);
+  io.to(roomId).emit('new_message', resultMsg);
+
+  if (passed) {
+    setTimeout(() => {
+      startCountdownAndLaunch(roomId, poll.targetGame);
+    }, 1200);
+  }
+
+  room.activePoll = null;
 }
 
 function launchGame(roomId, gameType) {
@@ -1197,26 +1181,118 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Switch or Toggle Game
-  socket.on('switch_game', ({ gameType }) => {
+  // Propose Game Switch (Initiates in-chat voting poll if multiple players, or starts with 5s cooldown if solo)
+  socket.on('propose_game_switch', ({ targetGame }) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room || !room.users.has(socket.id)) return;
-    launchGame(currentRoomId, gameType);
+    if (!['scribble', 'trivia', 'wordchain', 'emojipop', 'truthvent'].includes(targetGame)) return;
+
+    if (room.game.type === targetGame && (room.game.isActive || room.game.isCountdown)) {
+      return;
+    }
+
+    // If 1 or fewer players in room, switch directly with 5s countdown cooldown
+    if (room.users.size <= 1) {
+      startCountdownAndLaunch(currentRoomId, targetGame);
+      return;
+    }
+
+    // If poll already active
+    if (room.activePoll && Date.now() < room.activePoll.expiresAt) {
+      socket.emit('error_message', 'A game vote poll is already running in chat!');
+      return;
+    }
+
+    const pollId = `poll-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const pollData = {
+      id: pollId,
+      targetGame,
+      gameName: getGameDisplayName(targetGame),
+      proposer: currentUser?.name || 'A player',
+      yesVotes: [socket.id],
+      noVotes: [],
+      yesCount: 1,
+      noCount: 0,
+      totalUsers: room.users.size,
+      expiresAt: Date.now() + 10000,
+      isResolved: false
+    };
+
+    room.activePoll = {
+      ...pollData,
+      timer: setTimeout(() => {
+        resolvePoll(currentRoomId, pollId);
+      }, 10000)
+    };
+
+    const pollMsg = {
+      id: pollId,
+      sender: { name: '📊 Lounge Game Poll', color: '#8b5cf6', avatar: '🗳️' },
+      text: `${currentUser?.name || 'A player'} proposed switching to ${getGameDisplayName(targetGame)}. Vote below:`,
+      timestamp: Date.now(),
+      isSystem: true,
+      isPoll: true,
+      poll: pollData
+    };
+
+    room.messages.push(pollMsg);
+    io.to(currentRoomId).emit('new_message', pollMsg);
   });
 
+  // Vote on In-Chat Game Switch Poll
+  socket.on('vote_game_poll', ({ pollId, vote }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.activePoll || room.activePoll.id !== pollId || room.activePoll.isResolved) return;
+
+    const poll = room.activePoll;
+    poll.yesVotes = poll.yesVotes.filter(id => id !== socket.id);
+    poll.noVotes = poll.noVotes.filter(id => id !== socket.id);
+
+    if (vote === 'yes') {
+      poll.yesVotes.push(socket.id);
+    } else if (vote === 'no') {
+      poll.noVotes.push(socket.id);
+    }
+
+    poll.yesCount = poll.yesVotes.length;
+    poll.noCount = poll.noVotes.length;
+
+    io.to(currentRoomId).emit('poll_updated', {
+      pollId,
+      yesCount: poll.yesCount,
+      noCount: poll.noCount,
+      totalUsers: room.users.size
+    });
+
+    if (poll.yesCount > room.users.size / 2) {
+      clearTimeout(poll.timer);
+      resolvePoll(currentRoomId, pollId);
+    }
+  });
+
+  // Toggle Game (Start with 5s countdown cooldown or stop)
   socket.on('toggle_game', () => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room || !room.users.has(socket.id)) return;
 
-    if (room.game.isActive) {
+    if (room.game.isActive || room.game.isCountdown) {
       room.game.isActive = false;
+      room.game.isCountdown = false;
       clearRoomTimer(room);
       io.to(currentRoomId).emit('game_stopped');
     } else {
-      launchGame(currentRoomId, room.game.type || 'scribble');
+      startCountdownAndLaunch(currentRoomId, room.game.type || 'scribble');
     }
+  });
+
+  socket.on('switch_game', ({ gameType }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.users.has(socket.id)) return;
+    startCountdownAndLaunch(currentRoomId, gameType);
   });
 
   socket.on('next_truth_vent_prompt', () => {
@@ -1274,30 +1350,20 @@ io.on('connection', (socket) => {
           activeUsers: Array.from(room.users.values())
         });
 
-        if (room.game.isActive && room.game.type === 'scribble' && room.game.currentDrawer?.id === currentUser?.id) {
+        if (room.game?.isActive && room.game?.type === 'scribble' && room.game?.currentDrawer?.id === currentUser?.id) {
           endScribbleRound(currentRoomId, 'The drawer stepped out.');
         }
 
-        if (!room.isPermanent && room.users.size === 0) {
+        // Instant disintegration the second all players leave the room!
+        if (room.users.size === 0) {
           clearRoomTimer(room);
-          setTimeout(() => {
-            const checkRoom = rooms.get(currentRoomId);
-            if (checkRoom && checkRoom.users.size === 0 && !checkRoom.isPermanent) {
-              // Deep memory purge of all temporary canvas, chat, and location data
-              checkRoom.messages = [];
-              checkRoom.canvasStrokes = [];
-              checkRoom.anchorCoords = null;
-              checkRoom.game = null;
-              rooms.delete(currentRoomId);
-              io.emit('rooms_update', getLobbyRooms());
-            }
-          }, 30000);
-        } else if (room.isPermanent && room.users.size === 0) {
-          clearRoomTimer(room);
+          if (room.activePoll?.timer) clearTimeout(room.activePoll.timer);
           room.messages = [];
           room.canvasStrokes = [];
-          room.game.isActive = false;
-          room.game.scores = {};
+          room.anchorCoords = null;
+          room.game = null;
+          rooms.delete(currentRoomId);
+          io.emit('rooms_update', getLobbyRooms());
         }
       }
 

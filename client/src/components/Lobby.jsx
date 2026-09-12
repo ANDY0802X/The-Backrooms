@@ -236,9 +236,6 @@ export default function Lobby({
             >
               🎲 Re-Roll Alias
             </motion.button>
-            <span className="badge-pill hover-lift" style={{ background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-sage)' }}>
-              🔒 Ephemeral ID
-            </span>
           </div>
         </section>
       </Reveal>
@@ -422,9 +419,13 @@ export default function Lobby({
         })}
 
         {filteredRooms.length === 0 && (
-          <div className="glass-panel" style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center' }}>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-              No lounges match "{searchQuery}".
+          <div className="glass-panel" style={{ gridColumn: '1 / -1', padding: '48px 24px', textAlign: 'center' }}>
+            <span style={{ fontSize: '2.4rem', display: 'block', marginBottom: '12px' }}>🌌</span>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '8px' }}>
+              {searchQuery ? `No lounges match "${searchQuery}"` : 'No active lounges right now'}
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+              {searchQuery ? 'Try searching another topic or create this room!' : 'Create a lounge and invite peers or let nearby students discover it!'}
             </p>
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -432,7 +433,7 @@ export default function Lobby({
               className="btn-pill-primary"
               onClick={() => setIsModalOpen(true)}
             >
-              Create this Lounge ✨
+              + Create Lounge ✨
             </motion.button>
           </div>
         )}
