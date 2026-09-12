@@ -7,8 +7,16 @@ import RoomView from './components/RoomView';
 import { generateAnonymousIdentity } from './utils/identity';
 import { sounds } from './utils/sound';
 
-const SERVER_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
-const socket = io(SERVER_URL);
+const BACKEND_PROD_URL = 'https://the-backrooms-1.onrender.com';
+const SERVER_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_SERVER_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3001' : BACKEND_PROD_URL);
+
+const socket = io(SERVER_URL, {
+  transports: ['websocket', 'polling'],
+  withCredentials: true
+});
 
 const VIEW_ORDER = {
   landing: 0,

@@ -3,20 +3,22 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
-
 const ALLOWED_ORIGINS = [
   'https://ycrxi75f.insforge.site',
+  'https://the-backrooms-1.onrender.com',
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:4173'
 ];
 
+const app = express();
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
@@ -1103,9 +1105,32 @@ io.on('connection', (socket) => {
   socket.on('disconnect', handleLeave);
 });
 
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'TheBackrooms Socket.io Backend',
+    activeRooms: rooms.size,
+    timestamp: new Date().toISOString()
+  });
+});
+
+const clientDist = path.join(__dirname, '../client/dist');
+const indexHtml = path.join(clientDist, 'index.html');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+}
+
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+  if (fs.existsSync(indexHtml)) {
+    res.sendFile(indexHtml);
+  } else {
+    res.json({
+      status: 'live',
+      service: 'TheBackrooms Socket.io Backend',
+      socketEndpoint: '/socket.io/',
+      activeRooms: rooms.size
+    });
+  }
 });
 
 httpServer.listen(PORT, '0.0.0.0', () => {
