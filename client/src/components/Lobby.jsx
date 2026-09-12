@@ -192,6 +192,71 @@ export default function Lobby({
     }
   };
 
+  const getRoomIcon = (gameType, category) => {
+    // Chat bubble — vent/general/rant rooms
+    if (category === 'Rant' || gameType === 'truthvent') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 8h36a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H16l-8 8V10a2 2 0 0 1 2-2z" />
+          <line x1="14" y1="18" x2="34" y2="18" />
+          <line x1="14" y1="26" x2="26" y2="26" />
+        </svg>
+      );
+    }
+    // Brush — art/doodle/scribble rooms
+    if (category === 'Art' || gameType === 'scribble') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M36 6l6 6-24 24-8 2 2-8L36 6z" />
+          <path d="M30 12l6 6" />
+          <path d="M6 40c4-2 8-1 10 2" strokeDasharray="3 2" />
+        </svg>
+      );
+    }
+    // Question mark — trivia rooms
+    if (gameType === 'trivia') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="24" cy="24" r="18" />
+          <path d="M18 19c0-3.3 2.7-6 6-6s6 2.7 6 6c0 4-6 5-6 10" />
+          <circle cx="24" cy="37" r="1.5" fill="currentColor" />
+        </svg>
+      );
+    }
+    // Chain link — word chain rooms
+    if (gameType === 'wordchain') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 30l-4 4a6 6 0 0 1-8.5-8.5l8-8A6 6 0 0 1 22 20" />
+          <path d="M30 18l4-4a6 6 0 0 1 8.5 8.5l-8 8A6 6 0 0 1 26 28" />
+        </svg>
+      );
+    }
+    // Controller — emojipop / arcade / mini-game rooms
+    if (gameType === 'emojipop' || category === 'Mini-Game') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="6" y="16" width="36" height="22" rx="8" />
+          <line x1="16" y1="22" x2="16" y2="32" />
+          <line x1="11" y1="27" x2="21" y2="27" />
+          <circle cx="32" cy="22" r="2" fill="currentColor" />
+          <circle cx="38" cy="27" r="2" fill="currentColor" />
+          <circle cx="32" cy="32" r="2" fill="currentColor" />
+          <circle cx="26" cy="27" r="2" fill="currentColor" />
+        </svg>
+      );
+    }
+    // Default — couch/sofa for general/study
+    return (
+      <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 28V20a4 4 0 0 1 8 0v4h20v-4a4 4 0 0 1 8 0v8" />
+        <rect x="4" y="28" width="40" height="8" rx="3" />
+        <line x1="12" y1="36" x2="12" y2="42" />
+        <line x1="36" y1="36" x2="36" y2="42" />
+      </svg>
+    );
+  };
+
   return (
     <div className="lobby-container">
       {/* Header */}

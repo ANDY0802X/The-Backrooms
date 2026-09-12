@@ -85,6 +85,13 @@ export default function RoomView({
   const lastPointRef = useRef(null);
   const strokeHistoryRef = useRef([]);
 
+  // Toolbar auto-hide: hides while drawing, reappears on idle
+  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  const toolbarIdleTimerRef = useRef(null);
+
+  // Canvas stroke visual-fade loop (purely presentational — does NOT alter strokeHistoryRef)
+  const fadeRafRef = useRef(null);
+
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -127,7 +134,7 @@ export default function RoomView({
 
     socket.on('user_joined', ({ user, activeUsers: usersList }) => {
       setActiveUsers(usersList || []);
-      sounds.playChime();
+      sounds.playJoinChime();
     });
 
     socket.on('user_left', ({ user, activeUsers: usersList }) => {
@@ -142,6 +149,10 @@ export default function RoomView({
       setMessages(prev => [...prev, msg]);
       if (msg.sender?.name !== userProfile.name) {
         sounds.playPop();
+      }
+      // Front-end only: fire dissolve chime 200ms before message vaporizes
+      if (msg.isEphemeral) {
+        setTimeout(() => sounds.playDissolve(), 11800);
       }
     });
 
@@ -301,7 +312,29 @@ export default function RoomView({
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+
+    // Visual-only canvas stroke fade — paints a near-transparent overlay each frame
+    // Does NOT read or mutate strokeHistoryRef; no effect on sync
+    const startFadeLoop = () => {
+      const step = () => {
+        const c = canvasRef.current;
+        if (!c) return;
+        const ctx = c.getContext('2d');
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0,0,0,0.0015)'; // ~2-min full fade at 60fps
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.restore();
+        fadeRafRef.current = requestAnimationFrame(step);
+      };
+      fadeRafRef.current = requestAnimationFrame(step);
+    };
+    startFadeLoop();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (fadeRafRef.current) cancelAnimationFrame(fadeRafRef.current);
+    };
   }, []);
 
   const replayStrokes = (strokes) => {
@@ -371,6 +404,9 @@ export default function RoomView({
   const startDrawing = (e) => {
     isDrawingRef.current = true;
     lastPointRef.current = getCanvasCoords(e);
+    // Hide toolbar immediately when drawing starts
+    setIsToolbarVisible(false);
+    if (toolbarIdleTimerRef.current) clearTimeout(toolbarIdleTimerRef.current);
   };
 
   const draw = (e) => {
@@ -399,6 +435,9 @@ export default function RoomView({
   const stopDrawing = () => {
     isDrawingRef.current = false;
     lastPointRef.current = null;
+    // Reveal toolbar after 600ms idle
+    if (toolbarIdleTimerRef.current) clearTimeout(toolbarIdleTimerRef.current);
+    toolbarIdleTimerRef.current = setTimeout(() => setIsToolbarVisible(true), 600);
   };
 
   const exportCanvasSnapshot = () => {
@@ -555,8 +594,12 @@ export default function RoomView({
             <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{activeUsers.length || 1} online</span>
           </div>
 
-          {/* Connected User Avatars */}
-          <div className="presence-avatars-list" title="Active students in lounge">
+          {/* Connected User Avatars — glow intensity reflects room activity */}
+          <div
+            className="presence-avatars-list"
+            title="Active students in lounge"
+            style={{ '--activity-level': Math.min((activeUsers.length - 1) / 5, 1) }}
+          >
             {activeUsers.slice(0, 5).map(u => (
               <motion.div
                 key={u.id}
@@ -708,8 +751,11 @@ export default function RoomView({
                     onTouchEnd={stopDrawing}
                   />
 
-                  {/* Floating Drawing Toolbar */}
-                  <div className="canvas-floating-toolbar">
+                  {/* Floating Drawing Toolbar — auto-hides while drawing */}
+                  <div
+                    className={`canvas-floating-toolbar${isToolbarVisible ? '' : ' toolbar-hidden'}`}
+                    onMouseEnter={() => setIsToolbarVisible(true)}
+                  >
                     {PALETTE.map((c, i) => (
                       <motion.button
                         key={i}
