@@ -1,0 +1,16 @@
+{
+  "name": "the-backrooms-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build && npm --prefix server install",
+    "start": "node server/server.js",
+    "install:server": "npm --prefix server install",
+    "install:client": "npm --prefix client install"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
