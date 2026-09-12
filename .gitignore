@@ -1,0 +1,28 @@
+cyhi-logs/.local/
+
+# Dependencies & Build
+node_modules/
+client/node_modules/
+server/node_modules/
+dist/
+client/dist/
+.env
+.env.local
+.DS_Store
+__MACOSX/
+test-*.mjs
+
+# InsForge & AI agent skills
+.insforge
+.agent
+.agents
+.augment
+.claude
+.cline
+.github/copilot*
+.kilocode
+.qoder
+.qwen
+.roo
+.trae
+.windsurf

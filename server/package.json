@@ -1,0 +1,16 @@
+{
+  "name": "soulnook-server",
+  "version": "1.0.0",
+  "description": "Backend real-time server for Soulnook Decompression Lounge",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
