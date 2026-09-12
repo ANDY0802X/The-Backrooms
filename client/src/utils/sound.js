@@ -157,6 +157,61 @@ class SoundEngine {
     });
   }
 
+  // Soft Dissolve Chime (Plays when 12s ephemeral message vaporizes)
+  playDissolve() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const notes = [987.77, 783.99, 659.25, 493.88]; // B5 -> G5 -> E5 -> B4 ethereal descent
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.88, now + idx * 0.04 + 0.35);
+
+      gain.gain.setValueAtTime(0.06, now + idx * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + 0.38);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.04);
+      osc.stop(now + idx * 0.04 + 0.4);
+    });
+  }
+
+  // Gentle Room Join Chime (Warm welcoming entrance tone)
+  playJoin() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const notes = [392.00, 523.25, 659.25, 783.99]; // G4, C5, E5, G5 warm welcome arpeggio
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+      gain.gain.setValueAtTime(0.1, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.55);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.6);
+    });
+  }
+
   // Lo-Fi Calming Ambiance Toggle
   toggleAmbient() {
     if (this.isAmbientPlaying) {

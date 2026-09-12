@@ -212,6 +212,51 @@
   border-radius: var(--radius-lg);
 }
 
+/* Animated Intro / Tagline Banner */
+.lobby-animated-tagline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 6px 18px;
+  margin-bottom: 22px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.tagline-pulse-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #ff3b3b);
+  box-shadow: 0 0 10px var(--accent-glow, rgba(255, 59, 59, 0.5));
+  animation: pulseTaglinePip 2.2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes pulseTaglinePip {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 14px rgba(255, 59, 59, 0.8); }
+}
+
+.tagline-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 59, 59, 0.12);
+  color: var(--accent, #ff3b3b);
+  border: 1px solid rgba(255, 59, 59, 0.25);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-left: 6px;
+}
+
 .room-card-top {
   display: flex;
   align-items: center;
@@ -230,6 +275,51 @@
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+/* Visually distinct room cards with small icons representing purpose */
+.room-purpose-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--bg-well);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.22s var(--ease-sqs);
+}
+
+.room-purpose-badge.purpose-vent {
+  background: rgba(255, 77, 109, 0.12);
+  border-color: rgba(255, 77, 109, 0.35);
+  color: #ff4d6d;
+}
+
+.room-purpose-badge.purpose-doodle {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: #a78bfa;
+}
+
+.room-purpose-badge.purpose-arcade {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fb7185;
+}
+
+.room-purpose-badge.purpose-trivia {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.room-purpose-badge.purpose-chain {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
 }
 
 .room-user-badge {

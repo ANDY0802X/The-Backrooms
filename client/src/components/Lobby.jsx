@@ -87,11 +87,35 @@ export default function Lobby({
     return matchesCat && matchesSearch;
   });
 
+  const getRoomPurpose = (gameType, category) => {
+    if (category === 'Rant' || gameType === 'truthvent') {
+      return { icon: '💬', label: 'Vent & Truth', badgeClass: 'purpose-vent' };
+    }
+    switch (gameType) {
+      case 'trivia':
+        return { icon: '❓', label: 'Trivia Blitz', badgeClass: 'purpose-trivia' };
+      case 'wordchain':
+        return { icon: '🔗', label: 'Word Chain', badgeClass: 'purpose-chain' };
+      case 'emojipop':
+        return { icon: '🎮', label: 'Arcade Pop', badgeClass: 'purpose-arcade' };
+      case 'scribble':
+      default:
+        return { icon: '🎨', label: 'Doodle Canvas', badgeClass: 'purpose-doodle' };
+    }
+  };
+
   const handleCreateSubmit = (e) => {
     e.preventDefault();
     if (!newRoomName.trim()) return;
 
     sounds.playSuccess();
+
+    // Prevent marker stacking by adding slight jitter if at default center
+    const coords = { ...pinCoords };
+    if (Math.abs(coords.lat - 23.17504) < 0.00005 && Math.abs(coords.lng - 80.02921) < 0.00005) {
+      coords.lat += (Math.random() - 0.5) * 0.0012;
+      coords.lng += (Math.random() - 0.5) * 0.0012;
+    }
 
     if (activePinTab === 'room') {
       const roomPayload = {
@@ -103,31 +127,37 @@ export default function Lobby({
         tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean)
       };
 
-      if (typeof onCreateRoom === 'function') {
-        onCreateRoom(roomPayload);
-      }
-
-      if (typeof onCreatePin === 'function') {
-        onCreatePin({
-          title: newRoomName.trim(),
-          type: 'room',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
-          description: newRoomDesc.trim() || 'Live student lounge on campus.',
-          category: newRoomCategory,
-          user: userProfile
-        });
+      if (viewMode === 'list') {
+        if (typeof onCreateRoom === 'function') {
+          onCreateRoom(roomPayload);
+        }
+      } else {
+        // Map mode: atomically creates pin and linked room on server
+        if (typeof onCreatePin === 'function') {
+          onCreatePin({
+            title: newRoomName.trim(),
+            code: newRoomCode.trim().toUpperCase() || undefined,
+            type: 'room',
+            lat: coords.lat,
+            lng: coords.lng,
+            description: newRoomDesc.trim() || 'Live student lounge on campus.',
+            category: newRoomCategory,
+            selectedGame: newRoomGame,
+            tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean),
+            createdBy: userProfile
+          });
+        }
       }
     } else if (activePinTab === 'marketplace') {
       if (typeof onCreatePin === 'function') {
         onCreatePin({
           title: newRoomName.trim(),
           type: 'marketplace',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
+          lat: coords.lat,
+          lng: coords.lng,
           description: newRoomDesc.trim(),
           category: 'Marketplace',
-          user: userProfile,
+          createdBy: userProfile,
           marketData: {
             price: mktPrice.trim() || '$0',
             listingType: mktType,
@@ -141,13 +171,14 @@ export default function Lobby({
         onCreatePin({
           title: newRoomName.trim(),
           type: 'lostfound',
-          lat: pinCoords.lat,
-          lng: pinCoords.lng,
+          lat: coords.lat,
+          lng: coords.lng,
           description: newRoomDesc.trim(),
           category: 'LostFound',
-          user: userProfile,
+          createdBy: userProfile,
           lostFoundData: {
             category: lfCategory,
+            dateHappened: lfDateLoc.trim() || 'Recently',
             dateLocation: lfDateLoc.trim() || 'Campus area',
             photoUrl: lfPhotoUrl.trim(),
             description: newRoomDesc.trim()
@@ -224,6 +255,20 @@ export default function Lobby({
           </motion.button>
         </div>
       </header>
+
+      {/* Animated Intro / Tagline Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="lobby-animated-tagline"
+      >
+        <span className="tagline-pulse-pip"></span>
+        <span className="tagline-text">
+          <strong>No login. No logs.</strong> Ephemeral chats vanish in 12s.
+        </span>
+        <span className="tagline-badge">Zero-Trace</span>
+      </motion.div>
 
       {/* Identity Card */}
       <Reveal index={0}>
@@ -399,6 +444,7 @@ export default function Lobby({
           {filteredRooms.map((room, idx) => {
             const userCount = room.userCount !== undefined ? room.userCount : 1;
             const roomCode = room.code || room.id?.slice(0, 6)?.toUpperCase() || 'LOBBY';
+            const purpose = getRoomPurpose(room.selectedGame, room.category);
 
             return (
               <Reveal key={room.id} index={idx}>
@@ -411,8 +457,9 @@ export default function Lobby({
                   }}
                 >
                   <div className="room-card-top">
-                    <span className="room-card-game-badge">
-                      {getGameLabel(room.selectedGame)}
+                    <span className={`room-purpose-badge ${purpose.badgeClass}`} title={`Purpose: ${purpose.label}`}>
+                      <span>{purpose.icon}</span>
+                      <span>{purpose.label}</span>
                     </span>
                     <div className="room-user-badge">
                       <span className="pulsing-ping-dot"></span>

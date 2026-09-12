@@ -82,18 +82,31 @@ export default function RoomView({
   const [brushWidth, setBrushWidth] = useState(4);
   const [isEraser, setIsEraser] = useState(false);
   const isDrawingRef = useRef(false);
+  const [isDrawingActive, setIsDrawingActive] = useState(false);
+  const drawingIdleTimerRef = useRef(null);
   const lastPointRef = useRef(null);
   const strokeHistoryRef = useRef([]);
 
   const messagesEndRef = useRef(null);
+  const chatScrollContainerRef = useRef(null);
+  const isUserScrolledUpRef = useRef(false);
   const typingTimeoutRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const handleChatScroll = () => {
+    const el = chatScrollContainerRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isUserScrolledUpRef.current = distanceToBottom > 80;
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    if (!isUserScrolledUpRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom(true);
   }, [messages]);
 
   // Copy Room Code
@@ -111,12 +124,28 @@ export default function RoomView({
   useEffect(() => {
     if (!socket) return;
 
+    // Gentle chime on room join
+    sounds.playJoin();
+
     socket.emit('join_room', { roomId, user: userProfile });
 
     socket.on('room_joined_data', (data) => {
       if (data.room) setRoomData(data.room);
       if (data.activeUsers) setActiveUsers(data.activeUsers);
-      if (data.recentMessages) setMessages(data.recentMessages);
+      if (data.recentMessages) {
+        setMessages(data.recentMessages);
+        // Schedule auto-dissolve for existing ephemeral messages
+        data.recentMessages.forEach((msg) => {
+          if (msg.isEphemeral) {
+            const age = Date.now() - (msg.timestamp || Date.now());
+            const remaining = Math.max(800, 12000 - age);
+            setTimeout(() => {
+              setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+              sounds.playDissolve();
+            }, remaining);
+          }
+        });
+      }
       if (data.gameState) {
         setGameState(prev => ({ ...prev, ...data.gameState }));
       }
@@ -142,6 +171,14 @@ export default function RoomView({
       setMessages(prev => [...prev, msg]);
       if (msg.sender?.name !== userProfile.name) {
         sounds.playPop();
+      }
+
+      // Auto-dissolve ephemeral message after 12s with soft dissolve chime
+      if (msg.isEphemeral) {
+        setTimeout(() => {
+          setMessages(prev => prev.filter(m => m.id !== msg.id));
+          sounds.playDissolve();
+        }, 12000);
       }
     });
 
@@ -310,11 +347,11 @@ export default function RoomView({
     const ctx = canvas.getContext('2d');
     strokeHistoryRef.current = strokes;
     strokes.forEach(stroke => {
-      drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser);
+      drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser, stroke.timestamp);
     });
   };
 
-  const drawSegment = (ctx, x1, y1, x2, y2, color, width, isErase) => {
+  const drawSegment = (ctx, x1, y1, x2, y2, color, width, isErase, strokeTimestamp = null) => {
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -326,6 +363,11 @@ export default function RoomView({
     } else {
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = color;
+      // Soft visual depth fade for older strokes over time (does not mutate stroke data or sync logic)
+      if (strokeTimestamp) {
+        const age = Date.now() - strokeTimestamp;
+        ctx.globalAlpha = Math.max(0.75, 1 - age / 180000);
+      }
     }
 
     ctx.beginPath();
@@ -339,7 +381,7 @@ export default function RoomView({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser);
+    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser, stroke.timestamp);
     strokeHistoryRef.current.push(stroke);
   };
 
@@ -354,7 +396,7 @@ export default function RoomView({
   const handleClearCanvasClick = () => {
     clearLocalCanvas();
     sounds.playPop();
-    if (socket) socket.emit('clear_canvas');
+    if (socket) socket.emit('clear_canvas', { roomId });
   };
 
   const getCanvasCoords = (e) => {
@@ -370,6 +412,8 @@ export default function RoomView({
 
   const startDrawing = (e) => {
     isDrawingRef.current = true;
+    setIsDrawingActive(true);
+    if (drawingIdleTimerRef.current) clearTimeout(drawingIdleTimerRef.current);
     lastPointRef.current = getCanvasCoords(e);
   };
 
@@ -386,12 +430,13 @@ export default function RoomView({
       y2: coords.y,
       color: brushColor,
       width: brushWidth,
-      isEraser: isEraser
+      isEraser: isEraser,
+      timestamp: Date.now()
     };
 
-    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser);
+    drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser, stroke.timestamp);
     strokeHistoryRef.current.push(stroke);
-    if (socket) socket.emit('draw_stroke', stroke);
+    if (socket) socket.emit('draw_stroke', { roomId, stroke });
 
     lastPointRef.current = coords;
   };
@@ -399,6 +444,10 @@ export default function RoomView({
   const stopDrawing = () => {
     isDrawingRef.current = false;
     lastPointRef.current = null;
+    if (drawingIdleTimerRef.current) clearTimeout(drawingIdleTimerRef.current);
+    drawingIdleTimerRef.current = setTimeout(() => {
+      setIsDrawingActive(false);
+    }, 1100);
   };
 
   const exportCanvasSnapshot = () => {
@@ -416,7 +465,7 @@ export default function RoomView({
     const text = inputText.trim();
     if (!text || !socket) return;
 
-    socket.emit('send_message', { text, isEphemeral });
+    socket.emit('send_message', { roomId, text, isEphemeral });
     sounds.playSend();
     setInputText('');
     socket.emit('typing_status', { isTyping: false });
@@ -440,8 +489,13 @@ export default function RoomView({
   };
 
   const handleToggleGame = () => {
-    sounds.playPop();
-    if (socket) socket.emit('toggle_game');
+    if (gameState.isActive) {
+      sounds.playPop();
+      if (socket) socket.emit('toggle_game', {});
+    } else {
+      sounds.playSuccess();
+      if (socket) socket.emit('switch_game', { gameType: gameState.type });
+    }
   };
 
   const handleTriviaAnswer = (index) => {
@@ -459,7 +513,7 @@ export default function RoomView({
   const handleNextTruthVent = () => {
     if (socket) {
       sounds.playBoing();
-      socket.emit('next_truth_vent_prompt');
+      socket.emit('next_truth_vent_prompt', {});
     }
   };
 
@@ -476,7 +530,7 @@ export default function RoomView({
     if (!word || !socket) return;
 
     sounds.playPop();
-    socket.emit('send_message', { text: word });
+    socket.emit('wordchain_submit_word', { word });
     setGameState(prev => ({ ...prev, wordChainInput: '' }));
   };
 
@@ -555,8 +609,11 @@ export default function RoomView({
             <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{activeUsers.length || 1} online</span>
           </div>
 
-          {/* Connected User Avatars */}
-          <div className="presence-avatars-list" title="Active students in lounge">
+          {/* Connected User Avatars with activity-reflective aura glow */}
+          <div
+            className={`presence-avatars-list ${(gameState.isActive || activeUsers.length >= 2) ? 'activity-active' : 'activity-calm'}`}
+            title={`Active students in lounge (${gameState.isActive ? 'Active Game In Progress' : 'Quiet Lounge'})`}
+          >
             {activeUsers.slice(0, 5).map(u => (
               <motion.div
                 key={u.id}
@@ -708,8 +765,8 @@ export default function RoomView({
                     onTouchEnd={stopDrawing}
                   />
 
-                  {/* Floating Drawing Toolbar */}
-                  <div className="canvas-floating-toolbar">
+                  {/* Floating Drawing Toolbar (auto-hides when drawing, reappears on hover/idle) */}
+                  <div className={`canvas-floating-toolbar ${isDrawingActive ? 'toolbar-drawing-hidden' : ''}`}>
                     {PALETTE.map((c, i) => (
                       <motion.button
                         key={i}
@@ -773,13 +830,13 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="trivia-deck">
-                    <div className="game-deck-header">
+                  <div className="trivia-deck unified-game-frame">
+                    <div className="unified-game-header">
                       <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
                         ⚡ CAMPUS TRIVIA BLITZ
                       </span>
-                      <span className="game-timer-pill">
-                        ⏱️ {gameState.timeLeft}s left
+                      <span className="unified-game-timer">
+                        ⏱️ {gameState.timeLeft}s
                       </span>
                     </div>
 
@@ -840,14 +897,19 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="wordchain-deck">
-                    <div className="game-deck-header">
+                  <div className="wordchain-deck unified-game-frame">
+                    <div className="unified-game-header">
                       <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-sage)' }}>
                         🔗 RAPID WORD CHAIN
                       </span>
                       <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
                         🔥 Streak: {gameState.streakCount}x
                       </span>
+                      {gameState.isActive && (
+                        <span className="unified-game-timer">
+                          ⏱️ {gameState.timeLeft}s
+                        </span>
+                      )}
                     </div>
 
                     <div className="wordchain-hero-card">
@@ -912,13 +974,18 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="emojipop-top-bar">
+                  <div className="emojipop-top-bar unified-game-header">
                     <span className="badge-pill" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)' }}>
                       💥 EMOJI POP REFLEX
                     </span>
                     {gameState.scores && gameState.scores[userProfile.name] !== undefined && (
                       <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
-                        Your Score: {gameState.scores[userProfile.name]} pts
+                        Score: {gameState.scores[userProfile.name]} pts
+                      </span>
+                    )}
+                    {gameState.isActive && (
+                      <span className="unified-game-timer">
+                        ⏱️ {gameState.timeLeft}s
                       </span>
                     )}
                   </div>
@@ -975,14 +1042,22 @@ export default function RoomView({
                   exit={{ opacity: 0, y: -8, scale: 0.99 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="truthvent-deck">
-                    <div className="game-deck-header">
+                  <div className="truthvent-deck unified-game-frame">
+                    <div className="unified-game-header">
                       <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
                         🎭 TRUTH, VENT & DARE
                       </span>
                       <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--accent-amber)' }}>
                         {gameState.prompt?.type || 'Vent'}
                       </span>
+                      <button
+                        type="button"
+                        className="unified-game-exit-btn"
+                        onClick={handleNextTruthVent}
+                        title="Roll next prompt"
+                      >
+                        🎲
+                      </button>
                     </div>
 
                     <div className="truthvent-card-content">
@@ -1034,8 +1109,8 @@ export default function RoomView({
             </span>
           </div>
 
-          {/* Messages Feed */}
-          <div className="chat-messages-container">
+          {/* Messages Feed (fully scrollable, zero interference with input form) */}
+          <div className="chat-messages-container" ref={chatScrollContainerRef} onScroll={handleChatScroll}>
             <AnimatePresence initial={false}>
               {messages.map((m) => {
                 if (m.isSystem) {

@@ -332,14 +332,11 @@ export default function CampusMap({
 
       const marker = L.marker([lat, lng], { icon: customIcon });
 
-      // Click on pin flies smoothly to center it
-      marker.on('click', () => {
-        map.flyTo([lat, lng], Math.max(map.getZoom(), 16.5), { duration: 0.6, easeLinearity: 0.25 });
-      });
-
       // Popup Content Card styled with glass-panel design tokens
       const popupContainer = document.createElement('div');
       popupContainer.className = `pin-popup-card ${isLight ? 'popup-light' : 'popup-dark'}`;
+      L.DomEvent.disableClickPropagation(popupContainer);
+      L.DomEvent.disableScrollPropagation(popupContainer);
 
       let headerIconBg = isLight ? 'rgba(24, 24, 27, 0.08)' : 'rgba(255, 59, 59, 0.15)';
       let headerIconColor = isLight ? '#18181b' : '#ff3b3b';
@@ -425,48 +422,56 @@ export default function CampusMap({
         </div>
       `;
 
-      marker.bindPopup(popupContainer);
+      // Attach button actions directly to prevent race conditions or event leakage
+      const btnRoom = popupContainer.querySelector(`#btn-open-room-${pin.id}`);
+      if (btnRoom) {
+        btnRoom.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenRoom === 'function') {
+            onOpenRoom(pin.roomId || pin.id);
+          }
+        };
+      }
 
-      marker.on('popupopen', () => {
-        const btnRoom = document.getElementById(`btn-open-room-${pin.id}`);
-        if (btnRoom) {
-          btnRoom.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenRoom === 'function') {
-              onOpenRoom(pin.roomId || pin.id);
-            }
-          };
-        }
+      const btnMkt = popupContainer.querySelector(`#btn-open-mkt-${pin.id}`);
+      if (btnMkt) {
+        btnMkt.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenMarketplace === 'function') {
+            onOpenMarketplace(pin);
+          }
+        };
+      }
 
-        const btnMkt = document.getElementById(`btn-open-mkt-${pin.id}`);
-        if (btnMkt) {
-          btnMkt.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenMarketplace === 'function') {
-              onOpenMarketplace(pin);
-            }
-          };
-        }
+      const btnMktRoom = popupContainer.querySelector(`#btn-room-mkt-${pin.id}`);
+      if (btnMktRoom) {
+        btnMktRoom.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenRoom === 'function' && pin.roomId) {
+            onOpenRoom(pin.roomId);
+          }
+        };
+      }
 
-        const btnMktRoom = document.getElementById(`btn-room-mkt-${pin.id}`);
-        if (btnMktRoom) {
-          btnMktRoom.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenRoom === 'function' && pin.roomId) {
-              onOpenRoom(pin.roomId);
-            }
-          };
-        }
+      const btnLf = popupContainer.querySelector(`#btn-open-lf-${pin.id}`);
+      if (btnLf) {
+        btnLf.onclick = (e) => {
+          e.stopPropagation();
+          marker.closePopup();
+          if (typeof onOpenLostFound === 'function') {
+            onOpenLostFound(pin);
+          }
+        };
+      }
 
-        const btnLf = document.getElementById(`btn-open-lf-${pin.id}`);
-        if (btnLf) {
-          btnLf.onclick = () => {
-            marker.closePopup();
-            if (typeof onOpenLostFound === 'function') {
-              onOpenLostFound(pin);
-            }
-          };
-        }
+      marker.bindPopup(popupContainer, {
+        autoPan: true,
+        autoPanPadding: [40, 40],
+        closeButton: true,
+        offset: [0, -22]
       });
 
       clusterGroup.addLayer(marker);
