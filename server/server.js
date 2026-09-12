@@ -1082,7 +1082,7 @@ io.on('connection', (socket) => {
     if (!room || !room.users.has(socket.id)) return;
 
     if (isRateLimited(messageTimestamps, 8, 2000)) {
-      socket.emit('error_message', 'You are chatting too quickly. Please slow down.');
+      socket.emit('error_message', 'Rate limit exceeded: You are chatting too quickly. Please slow down.');
       return;
     }
 
