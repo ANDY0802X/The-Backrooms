@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import './Landing.css';
 import { sounds } from '../utils/sound';
 import { AVATARS } from '../utils/identity';
+import Reveal from './Reveal';
 
 export default function Landing({
   onEnterLounge,
@@ -111,13 +113,15 @@ export default function Landing({
 
       {/* Header Bar */}
       <header className="landing-nav">
-        <div className="brand-wrapper">
+        <div className="brand-wrapper hover-lift">
           <div className="brand-icon-box">🌌</div>
           <h2 className="brand-title">TheBackrooms</h2>
         </div>
 
         <div className="nav-actions">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.94 }}
             className="btn-pill-secondary"
             onClick={() => {
               sounds.playPop();
@@ -126,8 +130,10 @@ export default function Landing({
             title="Toggle Light / Dark Mode"
           >
             {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.94 }}
             className="btn-pill-secondary"
             onClick={() => {
               sounds.playBoing();
@@ -136,141 +142,200 @@ export default function Landing({
             title="Toggle Ambient Lo-Fi"
           >
             🎵 Lo-Fi
-          </button>
+          </motion.button>
         </div>
       </header>
 
-      {/* Center Card Stage - Modeled on Reference Image */}
+      {/* Center Card Stage with Staggered Scroll Reveals */}
       <main className="landing-stage">
         {/* Top Tag */}
-        <div className="backrooms-tag-pill">
-          <span>✨ CAMPUS DECOMPRESSION LOUNGE</span>
-        </div>
+        <Reveal index={0}>
+          <div className="backrooms-tag-pill hover-lift">
+            <span>✨ CAMPUS DECOMPRESSION LOUNGE</span>
+          </div>
+        </Reveal>
 
         {/* Big Title */}
-        <h1 className="backrooms-hero-title">The Backrooms</h1>
+        <Reveal index={1}>
+          <h1 className="backrooms-hero-title">The Backrooms</h1>
+        </Reveal>
 
         {/* Subtitle */}
-        <p className="backrooms-hero-sub">
-          Zero logins. Zero records. Instant anonymous venting & doodle lounges.
-        </p>
+        <Reveal index={2}>
+          <p className="backrooms-hero-sub">
+            Zero logins. Zero records. Instant anonymous venting & doodle lounges.
+          </p>
+        </Reveal>
 
         {/* Centered Neumorphic Card */}
-        <div className="backrooms-card-container">
-          {/* Top Inset Well: Editable Alias */}
-          <div className="backrooms-alias-box">
-            <input
-              type="text"
-              className="backrooms-alias-input"
-              value={displayName}
-              onChange={(e) => {
-                if (typeof onUpdateUserProfile === 'function') {
-                  onUpdateUserProfile({ ...userProfile, name: e.target.value });
-                }
-              }}
-              title="Click to customize your alias"
-              maxLength={28}
-            />
-            <span className="backrooms-alias-edit-icon" title="Edit alias">✎</span>
-          </div>
-
-          {/* Middle Inset Well: Avatar Orbit Carousel */}
-          <div className="backrooms-avatar-stage">
-            {/* Top-right Reroll Shuffle Button */}
-            <button
-              className="backrooms-shuffle-btn"
-              onClick={handleReroll}
-              title="Shuffle Random Identity"
-            >
-              🔀
-            </button>
-
-            {/* Left Arrow */}
-            <button
-              className="backrooms-nav-arrow"
-              onClick={handlePrevAvatar}
-              title="Previous Avatar"
-            >
-              ‹
-            </button>
-
-            {/* Center Avatar with Golden Glowing Orbit Ring */}
-            <div className="backrooms-avatar-orbit">
-              <div className="backrooms-orbit-ring">
-                <span className="backrooms-orbit-dot"></span>
-              </div>
-              <div className="backrooms-avatar-emoji">
-                {currentAvatar}
-              </div>
+        <Reveal index={3}>
+          <div className="backrooms-card-container hover-lift">
+            {/* Top Inset Well: Editable Alias */}
+            <div className="backrooms-alias-box hover-lift">
+              <input
+                type="text"
+                className="backrooms-alias-input"
+                value={displayName}
+                onChange={(e) => {
+                  if (typeof onUpdateUserProfile === 'function') {
+                    onUpdateUserProfile({ ...userProfile, name: e.target.value });
+                  }
+                }}
+                title="Click to customize your alias"
+                maxLength={28}
+              />
+              <span className="backrooms-alias-edit-icon" title="Edit alias">✎</span>
             </div>
 
-            {/* Right Arrow */}
-            <button
-              className="backrooms-nav-arrow"
-              onClick={handleNextAvatar}
-              title="Next Avatar"
-            >
-              ›
-            </button>
-          </div>
-
-          {/* Primary Action Button */}
-          <button className="backrooms-btn-primary" onClick={handleEnter}>
-            <span>Enter Lounges</span>
-            <span className="arrow-glyph">→</span>
-          </button>
-
-          {/* Secondary Action Button */}
-          <button className="backrooms-btn-secondary" onClick={handleCreate}>
-            <span>+ + Create New Lounge</span>
-          </button>
-
-          {/* Optional Join By Room Code toggle */}
-          <div className="backrooms-code-join-row">
-            {!showCodeInput ? (
-              <button
-                className="backrooms-code-link"
-                onClick={() => setShowCodeInput(true)}
+            {/* Middle Inset Well: Avatar Orbit Carousel */}
+            <div className="backrooms-avatar-stage">
+              {/* Top-right Reroll Shuffle Button */}
+              <motion.button
+                whileHover={{ rotate: 180, scale: 1.15 }}
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+                className="backrooms-shuffle-btn"
+                onClick={handleReroll}
+                title="Shuffle Random Identity"
               >
-                Have a Room Code? Join directly →
-              </button>
-            ) : (
-              <form className="backrooms-code-form" onSubmit={handleJoinCodeSubmit}>
-                <input
-                  type="text"
-                  className="backrooms-code-input"
-                  placeholder="e.g. COFFEE or DOODLE"
-                  value={inputCode}
-                  onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                  maxLength={10}
-                  autoFocus
-                />
-                <button type="submit" className="backrooms-code-btn">Join</button>
-                <button
-                  type="button"
-                  className="backrooms-code-btn-close"
-                  onClick={() => setShowCodeInput(false)}
+                🔀
+              </motion.button>
+
+              {/* Left Arrow */}
+              <motion.button
+                whileHover={{ scale: 1.18, x: -2 }}
+                whileTap={{ scale: 0.9 }}
+                className="backrooms-nav-arrow"
+                onClick={handlePrevAvatar}
+                title="Previous Avatar"
+              >
+                ‹
+              </motion.button>
+
+              {/* Center Avatar with Golden Glowing Orbit Ring */}
+              <div className="backrooms-avatar-orbit">
+                <div className="backrooms-orbit-ring">
+                  <span className="backrooms-orbit-dot"></span>
+                </div>
+                <motion.div
+                  key={currentAvatar}
+                  initial={{ scale: 0.8, opacity: 0.5 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                  className="backrooms-avatar-emoji"
                 >
-                  ✕
-                </button>
-              </form>
-            )}
+                  {currentAvatar}
+                </motion.div>
+              </div>
+
+              {/* Right Arrow */}
+              <motion.button
+                whileHover={{ scale: 1.18, x: 2 }}
+                whileTap={{ scale: 0.9 }}
+                className="backrooms-nav-arrow"
+                onClick={handleNextAvatar}
+                title="Next Avatar"
+              >
+                ›
+              </motion.button>
+            </div>
+
+            {/* Primary Action Button */}
+            <motion.button
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="backrooms-btn-primary"
+              onClick={handleEnter}
+            >
+              <span>Enter Lounges</span>
+              <span className="arrow-glyph">→</span>
+            </motion.button>
+
+            {/* Secondary Action Button */}
+            <motion.button
+              whileHover={{ scale: 1.015, y: -1.5 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="backrooms-btn-secondary"
+              onClick={handleCreate}
+            >
+              <span>+ + Create New Lounge</span>
+            </motion.button>
+
+            {/* Optional Join By Room Code toggle */}
+            <div className="backrooms-code-join-row">
+              <AnimatePresence mode="wait">
+                {!showCodeInput ? (
+                  <motion.button
+                    key="code-link"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="backrooms-code-link"
+                    onClick={() => setShowCodeInput(true)}
+                  >
+                    Have a Room Code? Join directly →
+                  </motion.button>
+                ) : (
+                  <motion.form
+                    key="code-form"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="backrooms-code-form"
+                    onSubmit={handleJoinCodeSubmit}
+                  >
+                    <input
+                      type="text"
+                      className="backrooms-code-input"
+                      placeholder="e.g. COFFEE or DOODLE"
+                      value={inputCode}
+                      onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                      maxLength={10}
+                      autoFocus
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="submit"
+                      className="backrooms-code-btn"
+                    >
+                      Join
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      type="button"
+                      className="backrooms-code-btn-close"
+                      onClick={() => setShowCodeInput(false)}
+                    >
+                      ✕
+                    </motion.button>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
+        </Reveal>
 
         {/* Bottom Ephemeral Assurance */}
-        <p className="backrooms-footer-tag">
-          Ephemeral In-Memory • Vanishes when rooms empty • 100% Anonymous
-        </p>
+        <Reveal index={4}>
+          <p className="backrooms-footer-tag">
+            Ephemeral In-Memory • Vanishes when rooms empty • 100% Anonymous
+          </p>
+        </Reveal>
       </main>
 
       {/* Subtle Bottom Bar */}
       <footer className="landing-mini-footer">
         <span>TheBackrooms • Campus Ephemeral Sanctuary</span>
         <div style={{ display: 'flex', gap: '16px' }}>
-          <span>🔒 Zero Trace</span>
-          <span>🎮 5 Multiplayer Games</span>
-          <span>⚡ Live WebRTC Mesh</span>
+          <span className="hover-lift">🔒 Zero Trace</span>
+          <span className="hover-lift">🎮 5 Multiplayer Games</span>
+          <span className="hover-lift">⚡ Live WebRTC Mesh</span>
         </div>
       </footer>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import './Room.css';
 import { sounds } from '../utils/sound';
 import confetti from 'canvas-confetti';
@@ -498,25 +499,37 @@ export default function RoomView({
       {/* Header Bar */}
       <header className="room-header">
         <div className="room-header-left">
-          <button className="btn-pill-secondary" style={{ padding: '6px 14px', fontSize: '0.82rem' }} onClick={onLeaveRoom}>
+          <motion.button
+            whileHover={{ scale: 1.05, x: -2 }}
+            whileTap={{ scale: 0.94 }}
+            className="btn-pill-secondary hover-lift"
+            style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+            onClick={onLeaveRoom}
+          >
             ← Back
-          </button>
+          </motion.button>
           <div className="room-title-heading">
             <span className="room-name-text">{roomData.name}</span>
-            <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--accent-lavender)' }}>
+            <span className="badge-pill hover-lift" style={{ background: 'var(--bg-well)', color: 'var(--accent-lavender)' }}>
               {roomData.category}
             </span>
           </div>
 
           {/* Room Code Badge */}
-          <div className="room-code-pill-btn" onClick={handleCopyRoomCode} title="Share Room Code with friends">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="room-code-pill-btn hover-lift"
+            onClick={handleCopyRoomCode}
+            title="Share Room Code with friends"
+          >
             <span>Code: #{displayRoomCode}</span>
             <span style={{ fontSize: '0.75rem' }}>{copiedCode ? '✓ Copied' : '📋'}</span>
-          </div>
+          </motion.div>
         </div>
 
         <div className="room-header-center">
-          <div className="activity-live-status-pill">
+          <div className="activity-live-status-pill hover-lift">
             <span className="activity-icon">
               {gameState.type === 'scribble' && '🎨'}
               {gameState.type === 'trivia' && '⚡'}
@@ -542,7 +555,7 @@ export default function RoomView({
 
         <div className="room-header-right">
           {/* Live Presence Ping Indicator */}
-          <div className="room-ping-indicator" title="Live active students connected">
+          <div className="room-ping-indicator hover-lift" title="Live active students connected">
             <span className="pulsing-ping-dot"></span>
             <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{activeUsers.length || 1} online</span>
           </div>
@@ -550,15 +563,23 @@ export default function RoomView({
           {/* Connected User Avatars */}
           <div className="presence-avatars-list" title="Active students in lounge">
             {activeUsers.slice(0, 5).map(u => (
-              <div key={u.id} className="presence-avatar" style={{ borderColor: u.color || 'var(--accent-lavender)' }} title={u.name}>
+              <motion.div
+                key={u.id}
+                whileHover={{ scale: 1.25, y: -2 }}
+                className="presence-avatar"
+                style={{ borderColor: u.color || 'var(--accent-lavender)' }}
+                title={u.name}
+              >
                 {u.avatar || '😴'}
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Theme Toggle */}
-          <button
-            className="btn-pill-secondary"
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.94 }}
+            className="btn-pill-secondary hover-lift"
             style={{ padding: '6px 12px', fontSize: '0.82rem' }}
             onClick={() => {
               sounds.playPop();
@@ -567,7 +588,7 @@ export default function RoomView({
             title="Toggle Light / Dark Mode"
           >
             {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-          </button>
+          </motion.button>
         </div>
       </header>
 
@@ -585,302 +606,424 @@ export default function RoomView({
                 { id: 'emojipop', icon: '💥', label: 'Emoji Pop' },
                 { id: 'truthvent', icon: '🎭', label: 'Truth & Vent' }
               ].map(tab => (
-                <button
+                <motion.button
                   key={tab.id}
-                  className={`arena-tab-pill ${gameState.type === tab.id ? 'active' : ''}`}
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`arena-tab-pill hover-lift ${gameState.type === tab.id ? 'active' : ''}`}
                   onClick={() => handleSwitchGame(tab.id)}
                 >
                   <span>{tab.icon}</span>
                   <span>{tab.label}</span>
-                </button>
+                </motion.button>
               ))}
             </div>
 
             {/* Quick Round Control Action */}
             <div className="arena-round-actions">
               {gameState.type === 'scribble' && (
-                <button className="btn-pill-secondary" style={{ padding: '5px 12px', fontSize: '0.78rem' }} onClick={handleToggleGame}>
+                <motion.button
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-pill-secondary hover-lift"
+                  style={{ padding: '5px 12px', fontSize: '0.78rem' }}
+                  onClick={handleToggleGame}
+                >
                   {gameState.isActive ? '⏸️ Stop Round' : '▶️ Play Scribble'}
-                </button>
+                </motion.button>
               )}
               {gameState.type === 'trivia' && (
-                <button className="btn-pill-primary" style={{ padding: '5px 14px', fontSize: '0.78rem' }} onClick={handleToggleGame}>
+                <motion.button
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-pill-primary hover-lift"
+                  style={{ padding: '5px 14px', fontSize: '0.78rem' }}
+                  onClick={handleToggleGame}
+                >
                   {gameState.isActive ? 'Next Question ➔' : 'Start Trivia'}
-                </button>
+                </motion.button>
               )}
               {gameState.type === 'truthvent' && (
-                <button className="btn-pill-primary" style={{ padding: '5px 14px', fontSize: '0.78rem' }} onClick={handleNextTruthVent}>
+                <motion.button
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-pill-primary hover-lift"
+                  style={{ padding: '5px 14px', fontSize: '0.78rem' }}
+                  onClick={handleNextTruthVent}
+                >
                   Next Prompt ➔
-                </button>
+                </motion.button>
               )}
               {gameState.type === 'emojipop' && (
-                <button className="btn-pill-secondary" style={{ padding: '5px 12px', fontSize: '0.78rem' }} onClick={handleToggleGame}>
+                <motion.button
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-pill-secondary hover-lift"
+                  style={{ padding: '5px 12px', fontSize: '0.78rem' }}
+                  onClick={handleToggleGame}
+                >
                   {gameState.isActive ? 'Pause Pop' : 'Start Pop'}
-                </button>
+                </motion.button>
               )}
             </div>
           </div>
 
           {/* Active Activity Screen Area */}
           <div className="arena-stage-container">
-            {/* 1. Canvas & Scribble Screen */}
-            {gameState.type === 'scribble' && (
-              <div className="canvas-wrapper">
-                {/* Active Scribble Word Banner */}
-                {gameState.isActive && (
-                  <div className="scribble-hud-strip">
-                    {gameState.isDrawer ? (
-                      <div className="scribble-hud-content">
-                        <span className="hud-badge">🎨 YOU ARE DRAWING:</span>
-                        <span className="hud-word">{gameState.word}</span>
-                        <span className="hud-note">Peers are guessing in chat alongside!</span>
-                      </div>
-                    ) : (
-                      <div className="scribble-hud-content">
-                        <span className="hud-badge">🤔 GUESS IN CHAT:</span>
-                        <span className="hud-word">{gameState.maskedWord}</span>
-                        <span className="hud-note">Type guesses in the chat on the right!</span>
-                      </div>
-                    )}
-                    <span className="hud-timer">⏱️ {gameState.timeLeft}s</span>
-                  </div>
-                )}
-
-                <canvas
-                  ref={canvasRef}
-                  className="drawing-canvas"
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                />
-
-                {/* Floating Drawing Toolbar */}
-                <div className="canvas-floating-toolbar">
-                  {PALETTE.map((c, i) => (
-                    <button
-                      key={i}
-                      className={`toolbar-color-btn ${brushColor === c && !isEraser ? 'active' : ''}`}
-                      style={{ backgroundColor: c }}
-                      onClick={() => {
-                        setBrushColor(c);
-                        setIsEraser(false);
-                        sounds.playPop();
-                      }}
-                    />
-                  ))}
-                  <div className="tool-separator" />
-                  <button
-                    className={`filter-tab-pill ${isEraser ? 'active' : ''}`}
-                    onClick={() => setIsEraser(!isEraser)}
-                  >
-                    🧹 Eraser
-                  </button>
-                  <input
-                    type="range"
-                    min="2"
-                    max="28"
-                    value={brushWidth}
-                    onChange={(e) => setBrushWidth(Number(e.target.value))}
-                    className="size-slider"
-                    title="Brush Size"
-                  />
-                  <div className="tool-separator" />
-                  <button className="filter-tab-pill" onClick={handleClearCanvasClick}>🗑️ Clear</button>
-                  <button className="filter-tab-pill" onClick={exportCanvasSnapshot}>📸 Save</button>
-                </div>
-              </div>
-            )}
-
-            {/* 2. Campus Trivia Blitz Screen */}
-            {gameState.type === 'trivia' && (
-              <div className="game-deck-wrapper">
-                <div className="trivia-deck">
-                  <div className="game-deck-header">
-                    <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
-                      ⚡ CAMPUS TRIVIA BLITZ
-                    </span>
-                    <span className="game-timer-pill">
-                      ⏱️ {gameState.timeLeft}s left
-                    </span>
-                  </div>
-
-                  <h2 className="trivia-question-title">
-                    {gameState.question || "Ready for rapid campus & tech trivia showdown?"}
-                  </h2>
-
-                  <div className="trivia-options-grid">
-                    {(gameState.options && gameState.options.length > 0 ? gameState.options : [
-                      "Option A", "Option B", "Option C", "Option D"
-                    ]).map((opt, i) => {
-                      const isSelected = gameState.selectedAnswerIdx === i;
-                      const isResolved = gameState.resolvedAnswer !== null;
-                      const isCorrect = isResolved && gameState.resolvedAnswer.correctIndex === i;
-
-                      let btnClass = 'trivia-option-btn';
-                      if (isSelected) btnClass += ' selected';
-                      if (isCorrect) btnClass += ' correct';
-
-                      return (
-                        <button
-                          key={i}
-                          className={btnClass}
-                          onClick={() => handleTriviaAnswer(i)}
-                          disabled={gameState.selectedAnswerIdx !== null}
-                        >
-                          <span className="opt-letter">{['A', 'B', 'C', 'D'][i]}</span>
-                          <span>{opt}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Leaderboard Row */}
-                  {gameState.scores && Object.keys(gameState.scores).length > 0 && (
-                    <div className="deck-scores-row">
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>🏆 Leaderboard:</span>
-                      {Object.entries(gameState.scores).map(([name, score]) => (
-                        <span key={name} className="score-pill">
-                          {name}: {score} pts
-                        </span>
-                      ))}
+            <AnimatePresence mode="wait">
+              {/* 1. Canvas & Scribble Screen */}
+              {gameState.type === 'scribble' && (
+                <motion.div
+                  key="scribble"
+                  className="canvas-wrapper"
+                  initial={{ opacity: 0, y: 8, scale: 0.99 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {/* Active Scribble Word Banner */}
+                  {gameState.isActive && (
+                    <div className="scribble-hud-strip">
+                      {gameState.isDrawer ? (
+                        <div className="scribble-hud-content">
+                          <span className="hud-badge">🎨 YOU ARE DRAWING:</span>
+                          <span className="hud-word">{gameState.word}</span>
+                          <span className="hud-note">Peers are guessing in chat alongside!</span>
+                        </div>
+                      ) : (
+                        <div className="scribble-hud-content">
+                          <span className="hud-badge">🤔 GUESS IN CHAT:</span>
+                          <span className="hud-word">{gameState.maskedWord}</span>
+                          <span className="hud-note">Type guesses in the chat on the right!</span>
+                        </div>
+                      )}
+                      <span className="hud-timer">⏱️ {gameState.timeLeft}s</span>
                     </div>
                   )}
-                </div>
-              </div>
-            )}
 
-            {/* 3. Rapid Word Chain Screen */}
-            {gameState.type === 'wordchain' && (
-              <div className="game-deck-wrapper">
-                <div className="wordchain-deck">
-                  <div className="game-deck-header">
-                    <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-sage)' }}>
-                      🔗 RAPID WORD CHAIN
-                    </span>
-                    <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
-                      🔥 Streak: {gameState.streakCount}x
-                    </span>
-                  </div>
+                  <canvas
+                    ref={canvasRef}
+                    className="drawing-canvas"
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                  />
 
-                  <div className="wordchain-hero-card">
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      Next Word Must Start With
-                    </span>
-                    <div className="chain-letter-display">
-                      {gameState.currentLetter || 'C'}
-                    </div>
-                    <div className="chain-last-played">
-                      Last played: <strong>{gameState.lastWord || 'Campus'}</strong>
-                    </div>
-                  </div>
-
-                  <form className="wordchain-form-bar" onSubmit={handleWordChainSubmit}>
+                  {/* Floating Drawing Toolbar */}
+                  <div className="canvas-floating-toolbar">
+                    {PALETTE.map((c, i) => (
+                      <motion.button
+                        key={i}
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.9 }}
+                        className={`toolbar-color-btn ${brushColor === c && !isEraser ? 'active' : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => {
+                          setBrushColor(c);
+                          setIsEraser(false);
+                          sounds.playPop();
+                        }}
+                      />
+                    ))}
+                    <div className="tool-separator" />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`filter-tab-pill ${isEraser ? 'active' : ''}`}
+                      onClick={() => setIsEraser(!isEraser)}
+                    >
+                      🧹 Eraser
+                    </motion.button>
                     <input
-                      type="text"
-                      className="wordchain-input-field"
-                      placeholder={`Enter word starting with "${gameState.currentLetter || 'C'}"...`}
-                      value={gameState.wordChainInput || ''}
-                      onChange={(e) => setGameState(prev => ({ ...prev, wordChainInput: e.target.value }))}
-                      autoFocus
+                      type="range"
+                      min="2"
+                      max="28"
+                      value={brushWidth}
+                      onChange={(e) => setBrushWidth(Number(e.target.value))}
+                      className="size-slider"
+                      title="Brush Size"
                     />
-                    <button type="submit" className="btn-pill-primary">
-                      Submit
-                    </button>
-                  </form>
+                    <div className="tool-separator" />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="filter-tab-pill"
+                      onClick={handleClearCanvasClick}
+                    >
+                      🗑️ Clear
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="filter-tab-pill"
+                      onClick={exportCanvasSnapshot}
+                    >
+                      📸 Save
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
 
-                  {gameState.wordHistory && gameState.wordHistory.length > 0 && (
-                    <div className="chain-trail-box">
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Recent Trail:</span>
-                      <div className="chain-tags-row">
-                        {gameState.wordHistory.slice(-8).map((w, idx) => (
-                          <span key={idx} className="chain-word-chip">{w}</span>
+              {/* 2. Campus Trivia Blitz Screen */}
+              {gameState.type === 'trivia' && (
+                <motion.div
+                  key="trivia"
+                  className="game-deck-wrapper"
+                  initial={{ opacity: 0, y: 8, scale: 0.99 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <div className="trivia-deck">
+                    <div className="game-deck-header">
+                      <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
+                        ⚡ CAMPUS TRIVIA BLITZ
+                      </span>
+                      <span className="game-timer-pill">
+                        ⏱️ {gameState.timeLeft}s left
+                      </span>
+                    </div>
+
+                    <h2 className="trivia-question-title">
+                      {gameState.question || "Ready for rapid campus & tech trivia showdown?"}
+                    </h2>
+
+                    <div className="trivia-options-grid">
+                      {(gameState.options && gameState.options.length > 0 ? gameState.options : [
+                        "Option A", "Option B", "Option C", "Option D"
+                      ]).map((opt, i) => {
+                        const isSelected = gameState.selectedAnswerIdx === i;
+                        const isResolved = gameState.resolvedAnswer !== null;
+                        const isCorrect = isResolved && gameState.resolvedAnswer.correctIndex === i;
+
+                        let btnClass = 'trivia-option-btn';
+                        if (isSelected) btnClass += ' selected';
+                        if (isCorrect) btnClass += ' correct';
+
+                        return (
+                          <motion.button
+                            key={i}
+                            whileHover={{ scale: 1.02, x: 4 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={btnClass}
+                            onClick={() => handleTriviaAnswer(i)}
+                            disabled={gameState.selectedAnswerIdx !== null}
+                          >
+                            <span className="opt-letter">{['A', 'B', 'C', 'D'][i]}</span>
+                            <span>{opt}</span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Leaderboard Row */}
+                    {gameState.scores && Object.keys(gameState.scores).length > 0 && (
+                      <div className="deck-scores-row">
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>🏆 Leaderboard:</span>
+                        {Object.entries(gameState.scores).map(([name, score]) => (
+                          <span key={name} className="score-pill">
+                            {name}: {score} pts
+                          </span>
                         ))}
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
-            {/* 4. Emoji Pop Reflex Screen */}
-            {gameState.type === 'emojipop' && (
-              <div className="emojipop-full-arena">
-                <div className="emojipop-top-bar">
-                  <span className="badge-pill" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)' }}>
-                    💥 EMOJI POP REFLEX
-                  </span>
-                  {gameState.scores && gameState.scores[userProfile.name] !== undefined && (
-                    <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
-                      Your Score: {gameState.scores[userProfile.name]} pts
+              {/* 3. Rapid Word Chain Screen */}
+              {gameState.type === 'wordchain' && (
+                <motion.div
+                  key="wordchain"
+                  className="game-deck-wrapper"
+                  initial={{ opacity: 0, y: 8, scale: 0.99 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <div className="wordchain-deck">
+                    <div className="game-deck-header">
+                      <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-sage)' }}>
+                        🔗 RAPID WORD CHAIN
+                      </span>
+                      <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
+                        🔥 Streak: {gameState.streakCount}x
+                      </span>
+                    </div>
+
+                    <div className="wordchain-hero-card">
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Next Word Must Start With
+                      </span>
+                      <div className="chain-letter-display">
+                        {gameState.currentLetter || 'C'}
+                      </div>
+                      <div className="chain-last-played">
+                        Last played: <strong>{gameState.lastWord || 'Campus'}</strong>
+                      </div>
+                    </div>
+
+                    <form className="wordchain-form-bar" onSubmit={handleWordChainSubmit}>
+                      <input
+                        type="text"
+                        className="wordchain-input-field"
+                        placeholder={`Enter word starting with "${gameState.currentLetter || 'C'}"...`}
+                        value={gameState.wordChainInput || ''}
+                        onChange={(e) => setGameState(prev => ({ ...prev, wordChainInput: e.target.value }))}
+                        autoFocus
+                      />
+                      <motion.button
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="submit"
+                        className="btn-pill-primary hover-lift"
+                      >
+                        Submit
+                      </motion.button>
+                    </form>
+
+                    {gameState.wordHistory && gameState.wordHistory.length > 0 && (
+                      <div className="chain-trail-box">
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Recent Trail:</span>
+                        <div className="chain-tags-row">
+                          {gameState.wordHistory.slice(-8).map((w, idx) => (
+                            <motion.span
+                              key={idx}
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className="chain-word-chip hover-lift"
+                            >
+                              {w}
+                            </motion.span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* 4. Emoji Pop Reflex Screen */}
+              {gameState.type === 'emojipop' && (
+                <motion.div
+                  key="emojipop"
+                  className="emojipop-full-arena"
+                  initial={{ opacity: 0, y: 8, scale: 0.99 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <div className="emojipop-top-bar">
+                    <span className="badge-pill" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)' }}>
+                      💥 EMOJI POP REFLEX
                     </span>
-                  )}
-                </div>
+                    {gameState.scores && gameState.scores[userProfile.name] !== undefined && (
+                      <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
+                        Your Score: {gameState.scores[userProfile.name]} pts
+                      </span>
+                    )}
+                  </div>
 
-                <div className="emojipop-click-field">
-                  {(gameState.targets || []).map(target => (
-                    <div
-                      key={target.id}
-                      className="emojipop-target-item"
-                      style={{ left: `${target.x}%`, top: `${target.y}%`, fontSize: `${target.size}px` }}
-                      onClick={() => handlePopTarget(target)}
-                    >
-                      <span>{target.emoji}</span>
-                      <span className="target-points-badge">+{target.points}</span>
+                  <div className="emojipop-click-field">
+                    <AnimatePresence>
+                      {(gameState.targets || []).map(target => (
+                        <motion.div
+                          key={target.id}
+                          initial={{ scale: 0, rotate: -15, opacity: 0 }}
+                          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0, transition: { duration: 0.15 } }}
+                          whileHover={{ scale: 1.25 }}
+                          whileTap={{ scale: 0.85 }}
+                          className="emojipop-target-item"
+                          style={{ left: `${target.x}%`, top: `${target.y}%`, fontSize: `${target.size}px` }}
+                          onClick={() => handlePopTarget(target)}
+                        >
+                          <span>{target.emoji}</span>
+                          <span className="target-points-badge">+{target.points}</span>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    {(!gameState.targets || gameState.targets.length === 0) && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="emojipop-idle-placeholder"
+                      >
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                          Click below to spawn targets and test your reflexes!
+                        </p>
+                        <motion.button
+                          whileHover={{ scale: 1.04, y: -1 }}
+                          whileTap={{ scale: 0.96 }}
+                          className="btn-pill-primary hover-lift"
+                          onClick={handleToggleGame}
+                        >
+                          🚀 Start Emoji Pop
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* 5. Truth, Vent & Dare Screen */}
+              {gameState.type === 'truthvent' && (
+                <motion.div
+                  key="truthvent"
+                  className="game-deck-wrapper"
+                  initial={{ opacity: 0, y: 8, scale: 0.99 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <div className="truthvent-deck">
+                    <div className="game-deck-header">
+                      <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
+                        🎭 TRUTH, VENT & DARE
+                      </span>
+                      <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--accent-amber)' }}>
+                        {gameState.prompt?.type || 'Vent'}
+                      </span>
                     </div>
-                  ))}
-                  {(!gameState.targets || gameState.targets.length === 0) && (
-                    <div className="emojipop-idle-placeholder">
-                      <p style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                        Click below to spawn targets and test your reflexes!
+
+                    <div className="truthvent-card-content">
+                      <span className="truthvent-prompt-label">Prompt for the Room:</span>
+                      <p className="truthvent-prompt-body">
+                        "{gameState.prompt?.text || 'What campus rumor drove you crazy recently?'}"
                       </p>
-                      <button className="btn-pill-primary" onClick={handleToggleGame}>
-                        🚀 Start Emoji Pop
-                      </button>
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
 
-            {/* 5. Truth, Vent & Dare Screen */}
-            {gameState.type === 'truthvent' && (
-              <div className="game-deck-wrapper">
-                <div className="truthvent-deck">
-                  <div className="game-deck-header">
-                    <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
-                      🎭 TRUTH, VENT & DARE
-                    </span>
-                    <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--accent-amber)' }}>
-                      {gameState.prompt?.type || 'Vent'}
-                    </span>
-                  </div>
+                    <div className="truthvent-actions-row">
+                      <motion.button
+                        whileHover={{ scale: 1.04, y: -1 }}
+                        whileTap={{ scale: 0.96 }}
+                        className="btn-pill-primary hover-lift"
+                        onClick={handleNextTruthVent}
+                      >
+                        🎲 Next Prompt
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.04, y: -1 }}
+                        whileTap={{ scale: 0.96 }}
+                        className="btn-pill-secondary hover-lift"
+                        onClick={handleSharePromptToChat}
+                        title="Send prompt to chat alongside"
+                      >
+                        📢 Share to Chat ➔
+                      </motion.button>
+                    </div>
 
-                  <div className="truthvent-card-content">
-                    <span className="truthvent-prompt-label">Prompt for the Room:</span>
-                    <p className="truthvent-prompt-body">
-                      "{gameState.prompt?.text || 'What campus rumor drove you crazy recently?'}"
-                    </p>
+                    <div className="truthvent-hint">
+                      Respond, debate, or confess anonymously in the chat right beside this card!
+                    </div>
                   </div>
-
-                  <div className="truthvent-actions-row">
-                    <button className="btn-pill-primary" onClick={handleNextTruthVent}>
-                      🎲 Next Prompt
-                    </button>
-                    <button className="btn-pill-secondary" onClick={handleSharePromptToChat} title="Send prompt to chat alongside">
-                      📢 Share to Chat ➔
-                    </button>
-                  </div>
-
-                  <div className="truthvent-hint">
-                    Respond, debate, or confess anonymously in the chat right beside this card!
-                  </div>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </section>
 
@@ -898,35 +1041,48 @@ export default function RoomView({
 
           {/* Messages Feed */}
           <div className="chat-messages-container">
-            {messages.map((m) => {
-              if (m.isSystem) {
+            <AnimatePresence initial={false}>
+              {messages.map((m) => {
+                if (m.isSystem) {
+                  return (
+                    <motion.div
+                      key={m.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="system-bubble"
+                    >
+                      {m.text}
+                    </motion.div>
+                  );
+                }
+
+                const isOwn = m.sender?.name === userProfile.name;
+
                 return (
-                  <div key={m.id} className="system-bubble">
-                    {m.text}
-                  </div>
+                  <motion.div
+                    key={m.id}
+                    initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                    className={`chat-bubble ${isOwn ? 'own' : 'other'} ${m.isEphemeral ? 'ephemeral-dissolve-bubble' : ''} hover-lift`}
+                  >
+                    <div className="chat-bubble-meta">
+                      <span style={{ color: m.sender?.color || 'var(--accent-lavender)', fontWeight: 700 }}>
+                        {m.sender?.avatar || '😴'} {m.sender?.name || 'Anonymous'}
+                      </span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
+                        {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="chat-bubble-text">{m.text}</div>
+                    {m.isEphemeral && <div className="ephemeral-burn-bar" />}
+                  </motion.div>
                 );
-              }
-
-              const isOwn = m.sender?.name === userProfile.name;
-
-              return (
-                <div
-                  key={m.id}
-                  className={`chat-bubble ${isOwn ? 'own' : 'other'} ${m.isEphemeral ? 'ephemeral-dissolve-bubble' : ''}`}
-                >
-                  <div className="chat-bubble-meta">
-                    <span style={{ color: m.sender?.color || 'var(--accent-lavender)', fontWeight: 700 }}>
-                      {m.sender?.avatar || '😴'} {m.sender?.name || 'Anonymous'}
-                    </span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>
-                      {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <div className="chat-bubble-text">{m.text}</div>
-                  {m.isEphemeral && <div className="ephemeral-burn-bar" />}
-                </div>
-              );
-            })}
+              })}
+            </AnimatePresence>
             <div ref={messagesEndRef} />
           </div>
 
@@ -940,13 +1096,15 @@ export default function RoomView({
           {/* Quick Reaction Bursts */}
           <div className="emoji-reactions-bar">
             {EMOJI_REACTIONS.map((emoji, i) => (
-              <button
+              <motion.button
                 key={i}
+                whileHover={{ scale: 1.35, y: -3 }}
+                whileTap={{ scale: 0.82 }}
                 className="emoji-btn"
                 onClick={() => handleSendReaction(emoji)}
               >
                 {emoji}
-              </button>
+              </motion.button>
             ))}
           </div>
 
@@ -960,8 +1118,10 @@ export default function RoomView({
                 value={inputText}
                 onChange={handleInputChange}
               />
-              <button
+              <motion.button
                 type="button"
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.88 }}
                 className={`ephemeral-toggle-btn ${isEphemeral ? 'active' : ''}`}
                 onClick={() => {
                   sounds.playPop();
@@ -970,10 +1130,15 @@ export default function RoomView({
                 title="Toggle 12s Dissolving Message"
               >
                 🔥
-              </button>
-              <button type="submit" className="chat-send-btn">
+              </motion.button>
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.08, x: 2 }}
+                whileTap={{ scale: 0.92 }}
+                className="chat-send-btn"
+              >
                 ➔
-              </button>
+              </motion.button>
             </div>
           </form>
         </section>
