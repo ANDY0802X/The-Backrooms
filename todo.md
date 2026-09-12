@@ -154,49 +154,49 @@ Example notification:
 
 Preserve and improve the existing games:
 
-* [ ] 🎨 Campus Scribble
-* [ ] ⚡ Campus Trivia Blitz
-* [ ] 🔗 Rapid Word Chain
-* [ ] 💥 Emoji Pop Reflex
-* [ ] 🎭 Truth, Vent & Dare
+* [x] 🎨 Campus Scribble
+* [x] ⚡ Campus Trivia Blitz
+* [x] 🔗 Rapid Word Chain
+* [x] 💥 Emoji Pop Reflex
+* [x] 🎭 Truth, Vent & Dare
 
 For each game:
 
-* [ ] Verify multiplayer synchronization.
-* [ ] Verify reconnect behavior.
-* [ ] Verify player join/leave behavior.
-* [ ] Verify scoring.
-* [ ] Verify timers.
-* [ ] Verify game cleanup.
-* [ ] Verify anonymous identity handling.
-* [ ] Optimize mobile controls.
+* [x] Verify multiplayer synchronization.
+* [x] Verify reconnect behavior.
+* [x] Verify player join/leave behavior.
+* [x] Verify scoring.
+* [x] Verify timers.
+* [x] Verify game cleanup.
+* [x] Verify anonymous identity handling.
+* [x] Optimize mobile controls.
 
 ---
 
 # 🔵 Phase 8 — Session Privacy & Cleanup
 
-* [ ] Make rooms ephemeral.
-* [ ] Delete inactive rooms from memory.
-* [ ] Clear temporary messages after sessions.
-* [ ] Clear temporary canvas data.
-* [ ] Clear game state after sessions.
-* [ ] Avoid persistent location history.
-* [ ] Avoid persistent player tracking.
-* [ ] Review all Socket.IO events for accidental data leakage.
+* [x] Make rooms ephemeral.
+* [x] Delete inactive rooms from memory.
+* [x] Clear temporary messages after sessions.
+* [x] Clear temporary canvas data.
+* [x] Clear game state after sessions.
+* [x] Avoid persistent location history.
+* [x] Avoid persistent player tracking.
+* [x] Review all Socket.IO events for accidental data leakage.
 
 ---
 
 # 🔵 Phase 9 — Security & Abuse Prevention
 
-* [ ] Validate room membership server-side.
-* [ ] Validate proximity server-side where possible.
-* [ ] Rate-limit room creation.
-* [ ] Rate-limit game actions.
-* [ ] Prevent arbitrary Socket.IO event abuse.
-* [ ] Validate all client-provided game data.
-* [ ] Investigate GPS spoofing limitations.
-* [ ] Prevent room enumeration.
-* [ ] Prevent unauthorized access to private room state.
+* [x] Validate room membership server-side.
+* [x] Validate proximity server-side where possible.
+* [x] Rate-limit room creation.
+* [x] Rate-limit game actions.
+* [x] Prevent arbitrary Socket.IO event abuse.
+* [x] Validate all client-provided game data.
+* [x] Investigate GPS spoofing limitations.
+* [x] Prevent room enumeration.
+* [x] Prevent unauthorized access to private room state.
 
 ---
 
@@ -243,13 +243,13 @@ Anonymous Identity    ██████████  100% (Zero-log, Ephemeral,
 Notifications         ██████████  100% (2–6 Player LFG Proximity Radar Alert)
 UI/UX                 ██████████  100% (Tactile Radar HUD, Mobile Switcher, Stealth Screen)
 Games                 ██████████  100% (5 Multiplayer Games Synced)
-Privacy/Cleanup       ██████████  100% (Ephemeral RAM State, Zero DB Records)
-Security              ████████░░  80% (Server-Side Distance Verification)
+Privacy/Cleanup       ██████████  100% (Ephemeral RAM State, Zero DB Records, Deep Purge)
+Security              ██████████  100% (Server-Side Distance Verification, Rate Limits, Quorum Guards)
 ```
 
 ## 🚧 Current Milestone
 
-**UI/UX Redesign & Mobile Viewport Polish Completed! [x]**
+**All Core Roadmap Milestones (Phase 1–9) Fully Completed! [x]**
 
 Progress:
 
@@ -270,5 +270,5 @@ Progress:
  ↓
 [x] UI polish & mobile touch refinement
  ↓
-[ ] Security + privacy hardening
+[x] Security + privacy hardening
 ```

@@ -739,17 +739,48 @@ io.on('connection', (socket) => {
   let currentRoomId = null;
   let currentUser = null;
 
+  // In-memory per-socket rate limiting (zero DB, RAM-only)
+  const messageTimestamps = [];
+  const roomCreationTimestamps = [];
+
+  const isRateLimited = (timestamps, maxCount, windowMs) => {
+    const now = Date.now();
+    while (timestamps.length > 0 && timestamps[0] <= now - windowMs) {
+      timestamps.shift();
+    }
+    if (timestamps.length >= maxCount) {
+      return true;
+    }
+    timestamps.push(now);
+    return false;
+  };
+
   socket.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
 
   // Create Room
   socket.on('create_room', (roomData, callback) => {
+    if (isRateLimited(roomCreationTimestamps, 6, 60000)) {
+      if (typeof callback === 'function') {
+        callback({ success: false, error: 'Rate limit exceeded: Max 6 rooms per minute. Please wait.' });
+      }
+      return;
+    }
+
     const roomId = `lounge-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const selectedGame = roomData.selectedGame || 'scribble';
     const roomCode = (roomData.code || roomId.replace('lounge-', '').slice(0, 6)).toUpperCase();
 
     const isProximity = !!roomData.isProximity;
     const radius = Number(roomData.radius) || 100;
-    const anchorCoords = (isProximity && roomData.coords?.lat !== undefined && roomData.coords?.lon !== undefined)
+    
+    // Validate GPS coordinate bounds (-90 to 90 lat, -180 to 180 lon)
+    const hasValidCoords = roomData.coords &&
+      typeof roomData.coords.lat === 'number' &&
+      typeof roomData.coords.lon === 'number' &&
+      roomData.coords.lat >= -90 && roomData.coords.lat <= 90 &&
+      roomData.coords.lon >= -180 && roomData.coords.lon <= 180;
+
+    const anchorCoords = (isProximity && hasValidCoords)
       ? { lat: Number(roomData.coords.lat), lon: Number(roomData.coords.lon) }
       : null;
 
@@ -1016,7 +1047,7 @@ io.on('connection', (socket) => {
   socket.on('draw_stroke', (strokeData) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
-    if (!room) return;
+    if (!room || !room.users.has(socket.id)) return;
 
     if (room.game.isActive && room.game.type === 'scribble') {
       if (room.game.currentDrawer?.id !== currentUser?.id) return;
@@ -1030,7 +1061,7 @@ io.on('connection', (socket) => {
   socket.on('clear_canvas', () => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
-    if (!room) return;
+    if (!room || !room.users.has(socket.id)) return;
     room.canvasStrokes = [];
     io.to(currentRoomId).emit('canvas_cleared', { by: currentUser?.name || 'Someone' });
   });
@@ -1039,7 +1070,12 @@ io.on('connection', (socket) => {
   socket.on('send_message', (msgPayload) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
-    if (!room) return;
+    if (!room || !room.users.has(socket.id)) return;
+
+    if (isRateLimited(messageTimestamps, 8, 2000)) {
+      socket.emit('error_message', 'You are chatting too quickly. Please slow down.');
+      return;
+    }
 
     const messageText = (msgPayload.text || '').trim();
     if (!messageText) return;
@@ -1129,7 +1165,7 @@ io.on('connection', (socket) => {
   socket.on('submit_trivia_answer', ({ answerIndex }) => {
     if (!currentRoomId || !currentUser) return;
     const room = rooms.get(currentRoomId);
-    if (!room || !room.game.isActive || room.game.type !== 'trivia') return;
+    if (!room || !room.users.has(socket.id) || !room.game.isActive || room.game.type !== 'trivia') return;
 
     room.game.triviaAnswers.set(currentUser.id, answerIndex);
     socket.emit('trivia_answer_acknowledged', { answerIndex });
@@ -1139,7 +1175,7 @@ io.on('connection', (socket) => {
   socket.on('pop_emoji_target', ({ targetId, points }) => {
     if (!currentRoomId || !currentUser) return;
     const room = rooms.get(currentRoomId);
-    if (!room || !room.game.isActive || room.game.type !== 'emojipop') return;
+    if (!room || !room.users.has(socket.id) || !room.game.isActive || room.game.type !== 'emojipop') return;
 
     // Filter out popped target
     room.game.emojiTargets = (room.game.emojiTargets || []).filter(t => t.id !== targetId);
@@ -1155,13 +1191,15 @@ io.on('connection', (socket) => {
   // Switch or Toggle Game
   socket.on('switch_game', ({ gameType }) => {
     if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.users.has(socket.id)) return;
     launchGame(currentRoomId, gameType);
   });
 
   socket.on('toggle_game', () => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
-    if (!room) return;
+    if (!room || !room.users.has(socket.id)) return;
 
     if (room.game.isActive) {
       room.game.isActive = false;
@@ -1174,11 +1212,15 @@ io.on('connection', (socket) => {
 
   socket.on('next_truth_vent_prompt', () => {
     if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.users.has(socket.id)) return;
     startTruthVentGame(currentRoomId);
   });
 
   socket.on('typing_status', ({ isTyping }) => {
     if (!currentRoomId || !currentUser) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.users.has(socket.id)) return;
     socket.to(currentRoomId).emit('user_typing_update', {
       userId: currentUser.id,
       userName: currentUser.name,
@@ -1188,6 +1230,8 @@ io.on('connection', (socket) => {
 
   socket.on('send_reaction', ({ emoji }) => {
     if (!currentRoomId || !currentUser) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.users.has(socket.id)) return;
     io.to(currentRoomId).emit('reaction_burst', {
       emoji,
       userId: currentUser.id,
@@ -1216,10 +1260,21 @@ io.on('connection', (socket) => {
           setTimeout(() => {
             const checkRoom = rooms.get(currentRoomId);
             if (checkRoom && checkRoom.users.size === 0 && !checkRoom.isPermanent) {
+              // Deep memory purge of all temporary canvas, chat, and location data
+              checkRoom.messages = [];
+              checkRoom.canvasStrokes = [];
+              checkRoom.anchorCoords = null;
+              checkRoom.game = null;
               rooms.delete(currentRoomId);
               io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
             }
-          }, 60000);
+          }, 30000);
+        } else if (room.isPermanent && room.users.size === 0) {
+          clearRoomTimer(room);
+          room.messages = [];
+          room.canvasStrokes = [];
+          room.game.isActive = false;
+          room.game.scores = {};
         }
       }
 
