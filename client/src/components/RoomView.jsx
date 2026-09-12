@@ -45,6 +45,9 @@ export default function RoomView({
   const [floatingParticles, setFloatingParticles] = useState([]);
   const [copiedCode, setCopiedCode] = useState(false);
   const [proximityDriftWarning, setProximityDriftWarning] = useState(null);
+  const [mobileTab, setMobileTab] = useState('arena'); // 'arena' | 'chat'
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [stealthMode, setStealthMode] = useState(false);
 
   // Multi-Game State
   const [gameState, setGameState] = useState({
@@ -111,6 +114,17 @@ export default function RoomView({
     } catch (e) {}
   };
 
+  // Escape key for Campus Stealth / Panic Screen
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setStealthMode(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Socket & Presence Sync
   useEffect(() => {
     if (!socket) return;
@@ -150,6 +164,7 @@ export default function RoomView({
       setMessages(prev => [...prev, msg]);
       if (msg.sender?.name !== userProfile.name) {
         sounds.playPop();
+        setUnreadChatCount(prev => prev + 1);
       }
     });
 
@@ -510,6 +525,45 @@ export default function RoomView({
 
   return (
     <div className="room-view-container">
+      {/* Campus Stealth / Panic Screen ("Boss Button") */}
+      {stealthMode && (
+        <div className="stealth-panic-overlay" onClick={() => setStealthMode(false)}>
+          <div className="stealth-notes-window" onClick={(e) => e.stopPropagation()}>
+            <div className="stealth-header">
+              <div className="stealth-header-title">
+                <span className="stealth-doc-icon">📄</span>
+                <span className="font-mono">CS301_Distributed_Systems_Lecture_09.pdf — Preview</span>
+              </div>
+              <button
+                type="button"
+                className="stealth-dismiss-btn font-mono"
+                onClick={() => setStealthMode(false)}
+              >
+                Resume Lounge (Esc) ➔
+              </button>
+            </div>
+            <div className="stealth-body">
+              <h2 className="stealth-topic">Section 5.3: Gossip Protocol & Proximity-Aware Distributed State</h2>
+              <p className="stealth-paragraph">
+                In peer-to-peer campus mesh networks, each node periodically disseminates heartbeat signals within bounded spherical coordinates (Haversine threshold: &le; 100m). If an active cluster reaches consensus, ephemeral sessions transition from candidate state to active quorum without persisting identifiers to relational disks.
+              </p>
+              <pre className="stealth-code-block font-mono">
+{`// Algorithmic Proof: Ephemeral Consensus Quorum
+function evaluateProximityCluster(candidates, radiusLimitMeters) {
+  return candidates.filter(peer => {
+    const d = calculateHaversineMeters(peer.anchor, localAnchor);
+    return d <= radiusLimitMeters && peer.state === "ACTIVE";
+  });
+}`}
+              </pre>
+              <div className="stealth-footer-hint font-mono">
+                <span>Press [Esc] or click anywhere to exit stealth mode</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Reaction Particles */}
       {floatingParticles.map(p => (
         <div key={p.id} className="floating-reaction-particle" style={{ left: p.left, bottom: p.bottom }}>
@@ -580,6 +634,18 @@ export default function RoomView({
         </div>
 
         <div className="room-header-right">
+          {/* Stealth Mode Camouflage Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.94 }}
+            className="btn-pill-secondary hover-lift"
+            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+            onClick={() => setStealthMode(!stealthMode)}
+            title="Instant Camouflage / Study Screen (Esc)"
+          >
+            📚 Stealth
+          </motion.button>
+
           {/* Live Presence Ping Indicator */}
           <div className="room-ping-indicator hover-lift" title="Live active students connected">
             <span className="pulsing-ping-dot"></span>
@@ -631,8 +697,32 @@ export default function RoomView({
         </div>
       )}
 
+      {/* Mobile Screen Pane Switcher (<768px) */}
+      <div className="mobile-view-switcher">
+        <button
+          type="button"
+          className={`mobile-switch-tab ${mobileTab === 'arena' ? 'active' : ''}`}
+          onClick={() => setMobileTab('arena')}
+        >
+          <span>🎮 Game Arena</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-switch-tab ${mobileTab === 'chat' ? 'active' : ''}`}
+          onClick={() => {
+            setMobileTab('chat');
+            setUnreadChatCount(0);
+          }}
+        >
+          <span>💬 Chat & Vents</span>
+          {unreadChatCount > 0 && (
+            <span className="mobile-unread-badge font-mono">{unreadChatCount}</span>
+          )}
+        </button>
+      </div>
+
       {/* Main Split Layout: Left In-Window Arena | Right Real-Time Chat */}
-      <main className="room-split-layout">
+      <main className={`room-split-layout show-${mobileTab}`}>
         {/* LEFT: Continuous In-Window Interactive Arena */}
         <section className="game-pane">
           {/* Top Activity Switcher Bar */}

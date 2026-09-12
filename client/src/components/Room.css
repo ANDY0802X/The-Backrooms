@@ -172,6 +172,10 @@
   position: relative;
 }
 
+.mobile-view-switcher {
+  display: none;
+}
+
 @media (max-width: 1040px) {
   .room-split-layout {
     grid-template-columns: 1fr 320px;
@@ -179,9 +183,76 @@
 }
 
 @media (max-width: 768px) {
+  .mobile-view-switcher {
+    display: flex;
+    align-items: center;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 4px var(--space-2);
+    gap: 6px;
+    z-index: 25;
+  }
+
+  .mobile-switch-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all var(--transition-fast);
+  }
+
+  .mobile-switch-tab.active {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-subtle);
+  }
+
+  .mobile-unread-badge {
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    font-weight: 700;
+  }
+
   .room-split-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1.15fr 0.85fr;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 48px - 42px);
+  }
+
+  .room-split-layout.show-arena .game-pane {
+    display: flex !important;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border-right: none;
+  }
+
+  .room-split-layout.show-arena .chat-pane {
+    display: none !important;
+  }
+
+  .room-split-layout.show-chat .game-pane {
+    display: none !important;
+  }
+
+  .room-split-layout.show-chat .chat-pane {
+    display: flex !important;
+    flex: 1;
+    width: 100%;
+    height: 100%;
   }
 }
 
@@ -901,5 +972,118 @@
 
 .drift-dismiss-btn:hover {
   background: rgba(239, 68, 68, 0.2);
+}
+
+/* ----------------------------------------------------
+   CAMPUS STEALTH / PANIC SCREEN ("Boss Button")
+   ---------------------------------------------------- */
+.stealth-panic-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #0f141c;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  box-sizing: border-box;
+  animation: stealth-appear 0.1s ease-out;
+}
+
+@keyframes stealth-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.stealth-notes-window {
+  width: 100%;
+  max-width: 860px;
+  background: #18202c;
+  border: 1px solid #2d3748;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.stealth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.stealth-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: #94a3b8;
+}
+
+.stealth-doc-icon {
+  font-size: 1.1rem;
+}
+
+.stealth-dismiss-btn {
+  background: #334155;
+  color: #f1f5f9;
+  border: 1px solid #475569;
+  padding: 5px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.stealth-dismiss-btn:hover {
+  background: #475569;
+}
+
+.stealth-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.stealth-topic {
+  font-family: var(--font-heading);
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.stealth-paragraph {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.stealth-code-block {
+  background: #0b0f17;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  font-size: 0.84rem;
+  color: #38bdf8;
+  overflow-x: auto;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.stealth-footer-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-align: right;
+  margin-top: 8px;
 }
 

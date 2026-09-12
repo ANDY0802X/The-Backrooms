@@ -1,6 +1,6 @@
 /* ==========================================================================
-   THEBACKROOMS — Minimal / Modern / Aesthetic Landing Page
-   Restrained, typography-led hierarchy, generous whitespace (Linear/Apple/Notion)
+   THEBACKROOMS — Tactile Gaming & Campus Sanctuary Landing Page
+   Restrained, typography-led hierarchy, physical button press states
    ========================================================================== */
 
 .landing-shell {
@@ -23,7 +23,7 @@
   }
 }
 
-/* Ambient Subtle Backdrop (Noisy doodles removed) */
+/* Ambient Subtle Backdrop */
 .landing-ambient-canvas {
   position: fixed;
   inset: 0;
@@ -71,19 +71,30 @@
 }
 
 .brand-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: var(--radius-full);
   background-color: var(--accent);
-  box-shadow: 0 0 8px var(--accent-glow);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .brand-name {
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   letter-spacing: -0.02em;
   color: var(--text-primary);
+}
+
+.brand-version-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 2px 6px;
+  color: var(--text-muted);
 }
 
 .landing-header-controls {
@@ -110,9 +121,14 @@
   border-color: var(--border-hover);
   color: var(--text-primary);
   background: var(--bg-surface-elevated);
+  transform: translateY(-1px);
 }
 
-/* Main Focus Center Stage (Generous whitespace & clear hierarchy) */
+.quiet-icon-btn:active {
+  transform: translateY(1px);
+}
+
+/* Main Focus Center Stage */
 .landing-center-stage {
   position: relative;
   z-index: 2;
@@ -123,31 +139,50 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: var(--space-12) 0 var(--space-8) 0;
+  padding: var(--space-8) 0 var(--space-6) 0;
 }
 
 @media (max-height: 720px) {
   .landing-center-stage {
-    padding: var(--space-6) 0;
+    padding: var(--space-4) 0;
   }
 }
 
 .landing-hero-block {
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
-.landing-kicker {
-  display: inline-block;
+/* Proximity & Campus Status Pill */
+.landing-proximity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: #10b981;
   text-transform: uppercase;
   margin-bottom: var(--space-4);
-  padding: var(--space-1) var(--space-3);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  padding: 5px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
   border-radius: var(--radius-full);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.1);
+}
+
+.proximity-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: radar-pulse 2s infinite ease-out;
+}
+
+@keyframes radar-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .landing-headline {
@@ -164,11 +199,11 @@
   font-size: clamp(0.95rem, 2vw, 1.06rem);
   line-height: 1.6;
   color: var(--text-secondary);
-  max-width: 480px;
+  max-width: 490px;
   margin: 0 auto;
 }
 
-/* Single Unified Action Card (Linear style) */
+/* Single Unified Action Card */
 .landing-action-card {
   width: 100%;
   background: var(--bg-surface);
@@ -177,11 +212,12 @@
   padding: var(--space-5);
   box-shadow: var(--shadow-md);
   box-sizing: border-box;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .landing-action-card:hover {
   border-color: var(--border-hover);
+  box-shadow: var(--shadow-lg);
 }
 
 .landing-entry-form {
@@ -211,24 +247,65 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .avatar-bubble-trigger:hover {
-  transform: scale(1.05);
+  transform: scale(1.06);
   border-color: var(--border-hover);
+  background: var(--bg-surface-elevated);
+}
+
+.avatar-bubble-trigger:active {
+  transform: scale(0.96);
 }
 
 .avatar-emoji {
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   line-height: 1;
+}
+
+/* Avatar Quick Picker Popover */
+.avatar-popover-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: var(--space-3);
+  background: var(--bg-well);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-1);
+}
+
+.avatar-choice-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 1.3rem;
+  padding: 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.avatar-choice-btn:hover {
+  background: var(--bg-surface-elevated);
+  transform: scale(1.15);
+  border-color: var(--border-hover);
+}
+
+.avatar-choice-btn.selected {
+  border-color: var(--accent);
+  background: rgba(176, 0, 32, 0.15);
 }
 
 .alias-field-container {
@@ -257,7 +334,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   cursor: pointer;
   padding: var(--space-2);
   color: var(--text-secondary);
@@ -269,20 +346,24 @@
 }
 
 .shuffle-alias-btn:hover {
-  transform: rotate(45deg);
+  transform: rotate(60deg) scale(1.1);
   color: var(--text-primary);
 }
 
-/* Single Primary Action Button */
+.shuffle-alias-btn:active {
+  transform: rotate(180deg) scale(0.9);
+}
+
+/* Tactile Primary Action Button */
 .primary-enter-btn {
   width: 100%;
   background: var(--accent);
   color: #ffffff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-lg);
   padding: var(--space-4) var(--space-6);
   font-family: var(--font-heading);
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -290,27 +371,28 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  box-shadow: 0 2px 10px var(--accent-glow);
+  box-shadow: 0 4px 14px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: all var(--transition-fast);
 }
 
 .primary-enter-btn:hover {
   background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px var(--accent-glow);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .primary-enter-btn:active {
-  transform: translateY(0);
+  transform: translateY(1.5px) scale(0.99);
+  box-shadow: 0 1px 4px var(--accent-glow);
 }
 
 .btn-arrow {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   transition: transform var(--transition-fast);
 }
 
 .primary-enter-btn:hover .btn-arrow {
-  transform: translateX(3px);
+  transform: translateX(4px);
 }
 
 /* Discreet Secondary: Join by Room Code */
@@ -326,7 +408,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-1) var(--space-2);
@@ -352,11 +434,11 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
-  font-size: 0.84rem;
+  font-size: 0.88rem;
   color: var(--text-primary);
   text-transform: uppercase;
   outline: none;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   transition: border-color var(--transition-fast);
 }
 
@@ -379,13 +461,18 @@
 .inline-code-submit:hover {
   border-color: var(--border-hover);
   background: var(--bg-surface);
+  transform: translateY(-1px);
+}
+
+.inline-code-submit:active {
+  transform: translateY(1px);
 }
 
 .inline-code-cancel {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   cursor: pointer;
   padding: var(--space-2);
 }
@@ -394,10 +481,50 @@
   color: var(--text-primary);
 }
 
+/* 5 Mini-Games Showcase Ribbon */
+.mini-games-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  width: 100%;
+}
+
+.game-ribbon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  cursor: default;
+  transition: all var(--transition-fast);
+}
+
+.game-ribbon-pill:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  background: var(--bg-surface-elevated);
+}
+
+.ribbon-icon {
+  font-size: 0.82rem;
+}
+
+.ribbon-name {
+  font-weight: 500;
+}
+
 /* Ephemeral Reassurance Note */
 .landing-reassurance {
   margin-top: var(--space-4);
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   color: var(--text-muted);
   letter-spacing: -0.01em;
 }
@@ -410,6 +537,7 @@
   max-width: 960px;
   margin: 0 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);

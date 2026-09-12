@@ -14,6 +14,8 @@ const GAME_OPTIONS = [
   { id: 'truthvent', name: '🎭 Truth, Vent & Dare (Confessions)' }
 ];
 
+const RANDOM_CODES = ['COFFEE', 'TRIVIA', 'DOODLE', 'CHAINS', 'ARCADE', 'NIGHT', 'CAMPUS', 'CHILL', 'MIDNIGHT', 'SANCTUARY'];
+
 export default function Lobby({
   rooms = [],
   userProfile,
@@ -41,6 +43,7 @@ export default function Lobby({
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // New room modal state
   const [newRoomName, setNewRoomName] = useState('');
@@ -51,6 +54,13 @@ export default function Lobby({
   const [newRoomTags, setNewRoomTags] = useState('');
   const [newRoomProximity, setNewRoomProximity] = useState(true);
   const [newRoomRadius, setNewRoomRadius] = useState(100);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(prev => (prev === msg ? null : prev));
+    }, 3200);
+  };
 
   const filteredRooms = rooms.filter(room => {
     let matchesCat = true;
@@ -113,8 +123,28 @@ export default function Lobby({
       navigator.clipboard.writeText(code);
       sounds.playPop();
       setCopiedCode(code);
+      showToast(`Copied #${code} to clipboard!`);
       setTimeout(() => setCopiedCode(null), 1800);
     } catch (e) {}
+  };
+
+  const handleQuickMatch = () => {
+    const nearbyOnly = rooms.filter(r => r.isProximity && nearbyRoomMap[r.id]?.isNearby);
+    const pool = nearbyOnly.length > 0 ? nearbyOnly : rooms;
+    if (pool.length > 0) {
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+      sounds.playChime();
+      onJoinRoom(chosen.id);
+    } else {
+      sounds.playBoing();
+      showToast('No active lounges right now. Create one to get started!');
+    }
+  };
+
+  const handleRandomizeCode = () => {
+    sounds.playPop();
+    const pick = RANDOM_CODES[Math.floor(Math.random() * RANDOM_CODES.length)];
+    setNewRoomCode(pick);
   };
 
   const getGameBadge = (gameType) => {
@@ -130,6 +160,20 @@ export default function Lobby({
 
   return (
     <div className="lobby-shell">
+      {/* Sleek Floating Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="lobby-floating-toast font-mono"
+          >
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Header */}
       <header className="lobby-top-bar">
         <div className="lobby-brand-group" onClick={onBackToLanding} title="Back to home">
@@ -179,14 +223,8 @@ export default function Lobby({
           <button
             type="button"
             className="lobby-quiet-btn"
-            onClick={() => {
-              if (rooms.length > 0) {
-                const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
-                sounds.playChime();
-                onJoinRoom(randomRoom.id);
-              }
-            }}
-            title="Join random room"
+            onClick={handleQuickMatch}
+            title="Join random nearby room"
           >
             ⚡ Quick Match
           </button>
@@ -203,13 +241,13 @@ export default function Lobby({
         </div>
       </header>
 
-      {/* Phase 1 & 4: Proximity Radar & Campus GPS Bar */}
-      <section className="proximity-radar-bar">
+      {/* Proximity Radar & Campus GPS HUD */}
+      <section className={`proximity-radar-hud ${radarActive ? 'active' : ''}`}>
         <div className="radar-status-group">
           <div className={`radar-indicator-pill ${radarActive ? 'active' : ''}`}>
             <span className={`radar-dot ${radarActive ? 'pulsing' : ''}`}></span>
             <span className="radar-status-text font-mono">
-              {radarActive ? 'RADAR ACTIVE • SCANNING ~100m' : 'PROXIMITY RADAR IDLE'}
+              {radarActive ? 'RADAR ACTIVE • SCANNING ~100M CLUSTERS' : 'PROXIMITY RADAR STANDBY'}
             </span>
           </div>
 
@@ -222,7 +260,7 @@ export default function Lobby({
           </button>
         </div>
 
-        {/* Location / Campus Preset Selector for Zero-Hassle Desktop & Tab Testing */}
+        {/* Location / Campus Preset Selector */}
         <div className="campus-location-selector">
           <label className="location-label font-mono">📍 GPS Anchor:</label>
           <select
@@ -248,7 +286,7 @@ export default function Lobby({
         {/* Radar Game Preferences (When radar is enabled) */}
         {radarActive && (
           <div className="radar-game-preference-row">
-            <span className="radar-pref-label font-mono">Matching for:</span>
+            <span className="radar-pref-label font-mono">Auto-Match For:</span>
             <div className="radar-game-pills">
               {GAME_OPTIONS.map((g) => {
                 const isSelected = preferredRadarGames.includes(g.id);
@@ -270,7 +308,7 @@ export default function Lobby({
 
       {/* Main Filter & Search Toolbar */}
       <section className="lobby-toolbar">
-        {/* Segmented Category Control (Linear/Notion Style) */}
+        {/* Segmented Category Control */}
         <div className="category-segmented-strip font-mono">
           {CATEGORIES.map(cat => {
             let count = 0;
@@ -302,7 +340,7 @@ export default function Lobby({
           <input
             type="text"
             className="search-code-input"
-            placeholder="Search rooms by name, topic, or enter #CODE..."
+            placeholder="Search topic or press Enter for #CODE..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
@@ -323,15 +361,19 @@ export default function Lobby({
       <main className="rooms-container">
         {filteredRooms.length === 0 ? (
           <div className="rooms-empty-state">
-            <p className="empty-title">No active lounges match your search.</p>
-            <p className="empty-sub">Create a new lounge or press Enter to join with code #{searchQuery.replace('#', '').toUpperCase()}.</p>
+            <p className="empty-title">No active lounges match your filter.</p>
+            <p className="empty-sub">
+              {searchQuery.trim()
+                ? `Press Enter to join with code #${searchQuery.replace('#', '').toUpperCase()} or create a lounge.`
+                : 'Create an ephemeral room and invite nearby peers on campus.'}
+            </p>
             <button
               type="button"
               className="lobby-primary-btn"
               style={{ marginTop: '16px' }}
               onClick={() => setIsModalOpen(true)}
             >
-              Create Lounge
+              + Create Lounge
             </button>
           </div>
         ) : (
@@ -347,6 +389,11 @@ export default function Lobby({
                   key={room.id}
                   className={`room-flat-card ${isOutOfRange ? 'out-of-range' : ''}`}
                   onClick={() => {
+                    if (isOutOfRange) {
+                      sounds.playBoing();
+                      showToast(`🚫 This room is locked to ~${room.radius || 100}m. Your GPS anchor is out of range.`);
+                      return;
+                    }
                     sounds.playChime();
                     onJoinRoom(room.id);
                   }}
@@ -401,8 +448,8 @@ export default function Lobby({
                         <span key={i} className="card-tag">#{tag}</span>
                       ))}
                     </div>
-                    <span className="card-action-hint font-mono">
-                      {isOutOfRange ? '🚫 Outside 100m' : 'Join ➔'}
+                    <span className={`card-action-hint font-mono ${isOutOfRange ? 'locked' : ''}`}>
+                      {isOutOfRange ? '🚫 Locked (>100m)' : 'Step Inside ➔'}
                     </span>
                   </div>
                 </div>
@@ -468,7 +515,17 @@ export default function Lobby({
                   </div>
 
                   <div className="modal-field">
-                    <label className="field-label font-mono">Room Code (Optional)</label>
+                    <div className="field-label-row">
+                      <label className="field-label font-mono">Room Code (Optional)</label>
+                      <button
+                        type="button"
+                        className="modal-dice-helper font-mono"
+                        onClick={handleRandomizeCode}
+                        title="Generate random code"
+                      >
+                        🎲 Random
+                      </button>
+                    </div>
                     <input
                       type="text"
                       className="modal-input font-mono"
@@ -493,7 +550,7 @@ export default function Lobby({
                   </select>
                 </div>
 
-                {/* Phase 2: Proximity Zone Toggle */}
+                {/* Proximity Zone Toggle */}
                 <div className="modal-field proximity-toggle-field">
                   <div className="proximity-toggle-header">
                     <label className="proximity-checkbox-label">
@@ -519,7 +576,7 @@ export default function Lobby({
                   </div>
                   <p className="proximity-note font-mono">
                     {newRoomProximity
-                      ? `🔒 Only students physically within ~${newRoomRadius}m of your current GPS anchor can discover or join. Exact coordinates are NEVER revealed to peers.`
+                      ? `🔒 Only students physically within ~${newRoomRadius}m of your current GPS anchor can discover or join. Coordinates are NEVER saved or broadcast.`
                       : `🔓 Open worldwide. Anyone with the code or browsing the lobby can join.`}
                   </p>
                 </div>

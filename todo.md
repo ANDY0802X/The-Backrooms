@@ -105,22 +105,22 @@ Example notification:
 
 # 🟠 Phase 5 — UI/UX Redesign
 
-* [ ] Redesign the landing page.
-* [ ] Redesign lobby.
-* [ ] Redesign room interface.
-* [ ] Improve mobile experience.
-* [ ] Make phone UI the primary design target.
-* [ ] Improve navigation hierarchy.
-* [ ] Make rooms compact and information-dense.
-* [ ] Improve game controls.
-* [ ] Add clear proximity status.
-* [ ] Add clear permission/location states.
-* [ ] Add connection status.
-* [ ] Improve loading states.
-* [ ] Improve empty states.
-* [ ] Improve error states.
-* [ ] Add subtle transitions and animations.
-* [ ] Maintain accessibility and readable contrast.
+* [x] Redesign the landing page.
+* [x] Redesign lobby.
+* [x] Redesign room interface.
+* [x] Improve mobile experience.
+* [x] Make phone UI the primary design target.
+* [x] Improve navigation hierarchy.
+* [x] Make rooms compact and information-dense.
+* [x] Improve game controls.
+* [x] Add clear proximity status.
+* [x] Add clear permission/location states.
+* [x] Add connection status.
+* [x] Improve loading states.
+* [x] Improve empty states.
+* [x] Improve error states.
+* [x] Add subtle transitions and animations.
+* [x] Maintain accessibility and readable contrast.
 
 ---
 
@@ -128,25 +128,25 @@ Example notification:
 
 ## Avoid
 
-* [ ] ❌ Excessive AI-style gradients.
-* [ ] ❌ Generic AI dashboard layouts.
-* [ ] ❌ ChatGPT-like interfaces.
-* [ ] ❌ Excessive glassmorphism.
-* [ ] ❌ Random glowing blobs.
-* [ ] ❌ Overuse of "✨ AI" visual language.
-* [ ] ❌ Unnecessary visual complexity.
+* [x] ❌ Excessive AI-style gradients.
+* [x] ❌ Generic AI dashboard layouts.
+* [x] ❌ ChatGPT-like interfaces.
+* [x] ❌ Excessive glassmorphism.
+* [x] ❌ Random glowing blobs.
+* [x] ❌ Overuse of "✨ AI" visual language.
+* [x] ❌ Unnecessary visual complexity.
 
 ## Target
 
-* [ ] Build a recognizable gaming/social identity.
-* [ ] Use strong typography.
-* [ ] Use compact cards/panels.
-* [ ] Use tactile buttons.
-* [ ] Use subtle motion.
-* [ ] Use deliberate spacing.
-* [ ] Make interactions feel physical/game-like.
-* [ ] Prioritize usability over decoration.
-* [ ] Maintain a dark-first visual system.
+* [x] Build a recognizable gaming/social identity.
+* [x] Use strong typography.
+* [x] Use compact cards/panels.
+* [x] Use tactile buttons.
+* [x] Use subtle motion.
+* [x] Use deliberate spacing.
+* [x] Make interactions feel physical/game-like.
+* [x] Prioritize usability over decoration.
+* [x] Maintain a dark-first visual system.
 
 ---
 
@@ -235,13 +235,13 @@ These are intentionally NOT part of the current implementation.
 ---
 
 # 📊 Current Progress
-
+ 
 ```text
 GPS / Proximity       ██████████  100% (Haversine 100m, Zero-Knowledge Server RAM)
 Room System           ██████████  100% (100m Proximity Lock, Discovery, Join Guards)
 Anonymous Identity    ██████████  100% (Zero-log, Ephemeral, Private GPS)
 Notifications         ██████████  100% (2–6 Player LFG Proximity Radar Alert)
-UI/UX                 ████████░░  80% (Radar Bar, Location Anchors, Distance Pills)
+UI/UX                 ██████████  100% (Tactile Radar HUD, Mobile Switcher, Stealth Screen)
 Games                 ██████████  100% (5 Multiplayer Games Synced)
 Privacy/Cleanup       ██████████  100% (Ephemeral RAM State, Zero DB Records)
 Security              ████████░░  80% (Server-Side Distance Verification)
@@ -249,7 +249,7 @@ Security              ████████░░  80% (Server-Side Distance 
 
 ## 🚧 Current Milestone
 
-**Proximity Foundation & Anonymous Radar Matching Completed! [x]**
+**UI/UX Redesign & Mobile Viewport Polish Completed! [x]**
 
 Progress:
 
@@ -268,7 +268,7 @@ Progress:
  ↓
 [x] Multiplayer game sync
  ↓
-[ ] UI polish & mobile touch refinement
+[x] UI polish & mobile touch refinement
  ↓
 [ ] Security + privacy hardening
 ```
