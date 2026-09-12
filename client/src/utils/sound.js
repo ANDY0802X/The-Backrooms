@@ -207,6 +207,61 @@ class SoundEngine {
     }
     this.isAmbientPlaying = false;
   }
+
+  // Soft Dissolve Chime — descending glassy tone, fired when ephemeral message vanishes
+  playDissolve() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    // Two overlapping sine tones descending — like a fading ember
+    [[880, 440], [660, 330]].forEach(([startFreq, endFreq], i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const delay = i * 0.08;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(startFreq, now + delay);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + delay + 0.55);
+
+      gain.gain.setValueAtTime(0.0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.07, now + delay + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.6);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.65);
+    });
+  }
+
+  // Gentle Room Join Bell — soft two-tone ascending chime, warmer than playChime()
+  playJoinChime() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    // Gentle pentatonic pair — C5 → E5
+    [523.25, 659.25].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const delay = i * 0.12;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      gain.gain.setValueAtTime(0.0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.09, now + delay + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.55);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.6);
+    });
+  }
 }
 
 export const sounds = new SoundEngine();

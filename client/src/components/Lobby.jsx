@@ -101,6 +101,71 @@ export default function Lobby({
     }
   };
 
+  const getRoomIcon = (gameType, category) => {
+    // Chat bubble — vent/general/rant rooms
+    if (category === 'Rant' || gameType === 'truthvent') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 8h36a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H16l-8 8V10a2 2 0 0 1 2-2z" />
+          <line x1="14" y1="18" x2="34" y2="18" />
+          <line x1="14" y1="26" x2="26" y2="26" />
+        </svg>
+      );
+    }
+    // Brush — art/doodle/scribble rooms
+    if (category === 'Art' || gameType === 'scribble') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M36 6l6 6-24 24-8 2 2-8L36 6z" />
+          <path d="M30 12l6 6" />
+          <path d="M6 40c4-2 8-1 10 2" strokeDasharray="3 2" />
+        </svg>
+      );
+    }
+    // Question mark — trivia rooms
+    if (gameType === 'trivia') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="24" cy="24" r="18" />
+          <path d="M18 19c0-3.3 2.7-6 6-6s6 2.7 6 6c0 4-6 5-6 10" />
+          <circle cx="24" cy="37" r="1.5" fill="currentColor" />
+        </svg>
+      );
+    }
+    // Chain link — word chain rooms
+    if (gameType === 'wordchain') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 30l-4 4a6 6 0 0 1-8.5-8.5l8-8A6 6 0 0 1 22 20" />
+          <path d="M30 18l4-4a6 6 0 0 1 8.5 8.5l-8 8A6 6 0 0 1 26 28" />
+        </svg>
+      );
+    }
+    // Controller — emojipop / arcade / mini-game rooms
+    if (gameType === 'emojipop' || category === 'Mini-Game') {
+      return (
+        <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="6" y="16" width="36" height="22" rx="8" />
+          <line x1="16" y1="22" x2="16" y2="32" />
+          <line x1="11" y1="27" x2="21" y2="27" />
+          <circle cx="32" cy="22" r="2" fill="currentColor" />
+          <circle cx="38" cy="27" r="2" fill="currentColor" />
+          <circle cx="32" cy="32" r="2" fill="currentColor" />
+          <circle cx="26" cy="27" r="2" fill="currentColor" />
+        </svg>
+      );
+    }
+    // Default — couch/sofa for general/study
+    return (
+      <svg className="room-type-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 28V20a4 4 0 0 1 8 0v4h20v-4a4 4 0 0 1 8 0v8" />
+        <rect x="4" y="28" width="40" height="8" rx="3" />
+        <line x1="12" y1="36" x2="12" y2="42" />
+        <line x1="36" y1="36" x2="36" y2="42" />
+      </svg>
+    );
+  };
+
   return (
     <div className="lobby-container">
       {/* Header */}
@@ -288,7 +353,13 @@ export default function Lobby({
               <motion.div
                 whileHover={{ y: -4, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
                 className="glass-panel-interactive room-card hover-lift"
+                style={{ '--activity-level': Math.min((room.userCount || 1) / 6, 1) }}
               >
+                {/* Room Type Icon */}
+                <div className="room-card-icon-area">
+                  {getRoomIcon(room.selectedGame, room.category)}
+                </div>
+
                 <div className="room-card-top">
                   <span className="room-card-game-badge hover-lift">
                     {getGameLabel(room.selectedGame)}
@@ -398,85 +469,87 @@ export default function Lobby({
                 </motion.button>
               </div>
 
-              <form onSubmit={handleCreateSubmit}>
-                <div className="modal-form-group">
-                  <label className="modal-label">Lounge Name *</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="e.g. 3AM Chill Corner, Late Night Cram"
-                    value={newRoomName}
-                    onChange={(e) => setNewRoomName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                <div className="modal-form-group">
-                  <label className="modal-label">Custom Room Code (Optional)</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="e.g. COZY42 (or leave blank to auto-generate)"
-                    value={newRoomCode}
-                    onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
-                    maxLength={10}
-                  />
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                    Friends can enter this code from the home page to join your room immediately.
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <form onSubmit={handleCreateSubmit} className="modal-form-flex">
+                <div className="modal-form-scroll">
                   <div className="modal-form-group">
-                    <label className="modal-label">Category</label>
-                    <select
+                    <label className="modal-label">Lounge Name *</label>
+                    <input
+                      type="text"
                       className="modal-input"
-                      value={newRoomCategory}
-                      onChange={(e) => setNewRoomCategory(e.target.value)}
-                    >
-                      <option value="General">🛋️ General Chill</option>
-                      <option value="Study">📚 Study / Focus</option>
-                      <option value="Rant">📢 Anonymous Vent</option>
-                      <option value="Art">🎨 Art / Canvas</option>
-                      <option value="Mini-Game">🎮 Multiplayer Games</option>
-                    </select>
+                      placeholder="e.g. 3AM Chill Corner, Late Night Cram"
+                      value={newRoomName}
+                      onChange={(e) => setNewRoomName(e.target.value)}
+                      required
+                      autoFocus
+                    />
                   </div>
 
                   <div className="modal-form-group">
-                    <label className="modal-label">Multiplayer Mini-Game</label>
-                    <select
+                    <label className="modal-label">Custom Room Code (Optional)</label>
+                    <input
+                      type="text"
                       className="modal-input"
-                      value={newRoomGame}
-                      onChange={(e) => setNewRoomGame(e.target.value)}
-                    >
-                      {GAME_OPTIONS.map(g => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
+                      placeholder="e.g. COZY42 (or leave blank to auto-generate)"
+                      value={newRoomCode}
+                      onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
+                      maxLength={10}
+                    />
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      Friends can enter this code from the home page to join your room immediately.
+                    </span>
                   </div>
-                </div>
 
-                <div className="modal-form-group">
-                  <label className="modal-label">Description (Optional)</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="A safe space for mid-terms ranting..."
-                    value={newRoomDesc}
-                    onChange={(e) => setNewRoomDesc(e.target.value)}
-                  />
-                </div>
+                  <div className="modal-grid-2">
+                    <div className="modal-form-group">
+                      <label className="modal-label">Category</label>
+                      <select
+                        className="modal-input"
+                        value={newRoomCategory}
+                        onChange={(e) => setNewRoomCategory(e.target.value)}
+                      >
+                        <option value="General">🛋️ General Chill</option>
+                        <option value="Study">📚 Study / Focus</option>
+                        <option value="Rant">📢 Anonymous Vent</option>
+                        <option value="Art">🎨 Art / Canvas</option>
+                        <option value="Mini-Game">🎮 Multiplayer Games</option>
+                      </select>
+                    </div>
 
-                <div className="modal-form-group">
-                  <label className="modal-label">Tags (comma separated)</label>
-                  <input
-                    type="text"
-                    className="modal-input"
-                    placeholder="exams, chill, coffee, lofi"
-                    value={newRoomTags}
-                    onChange={(e) => setNewRoomTags(e.target.value)}
-                  />
+                    <div className="modal-form-group">
+                      <label className="modal-label">Multiplayer Mini-Game</label>
+                      <select
+                        className="modal-input"
+                        value={newRoomGame}
+                        onChange={(e) => setNewRoomGame(e.target.value)}
+                      >
+                        {GAME_OPTIONS.map(g => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="modal-form-group">
+                    <label className="modal-label">Description (Optional)</label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="A safe space for mid-terms ranting..."
+                      value={newRoomDesc}
+                      onChange={(e) => setNewRoomDesc(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="modal-form-group">
+                    <label className="modal-label">Tags (comma separated)</label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="exams, chill, coffee, lofi"
+                      value={newRoomTags}
+                      onChange={(e) => setNewRoomTags(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="modal-actions">
