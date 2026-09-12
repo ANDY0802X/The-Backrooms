@@ -7,6 +7,9 @@ import RoomView from './components/RoomView';
 import { generateAnonymousIdentity } from './utils/identity';
 import { sounds } from './utils/sound';
 
+import { requestDeviceLocation, CAMPUS_PRESETS } from './utils/geolocation';
+import NearbyGameAlert from './components/NearbyGameAlert';
+
 const BACKEND_PROD_URL = 'https://the-backrooms-1.onrender.com';
 const SERVER_URL =
   import.meta.env.VITE_SOCKET_URL ||
@@ -71,6 +74,21 @@ export default function App() {
   const [currentRoomId, setCurrentRoomId] = useState(null);
   const [rooms, setRooms] = useState([]);
 
+  // Geolocation & Proximity State
+  const [campusPreset, setCampusPreset] = useState('library');
+  const [coords, setCoords] = useState(() => {
+    const defaultPreset = CAMPUS_PRESETS.find(p => p.id === 'library');
+    return defaultPreset ? defaultPreset.coords : { lat: 28.545000, lon: 77.192600 };
+  });
+  const [locationStatus, setLocationStatus] = useState('active'); // 'active' | 'locating' | 'error'
+  const [locationError, setLocationError] = useState(null);
+  const [radarActive, setRadarActive] = useState(false);
+  const [preferredRadarGames, setPreferredRadarGames] = useState([
+    'scribble', 'trivia', 'wordchain', 'emojipop', 'truthvent'
+  ]);
+  const [nearbyRoomMap, setNearbyRoomMap] = useState({});
+  const [activeMatchAlert, setActiveMatchAlert] = useState(null);
+
   // Sync theme with HTML root attribute
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -101,6 +119,119 @@ export default function App() {
     };
   }, []);
 
+  // Query nearby rooms when coords change or room list updates
+  useEffect(() => {
+    if (!coords) return;
+    const fetchNearby = () => {
+      socket.emit('get_nearby_rooms', { coords }, (res) => {
+        if (res && res.success && res.nearbyMap) {
+          setNearbyRoomMap(res.nearbyMap);
+        }
+      });
+    };
+
+    fetchNearby();
+    const interval = setInterval(fetchNearby, 6000);
+    return () => clearInterval(interval);
+  }, [coords, rooms]);
+
+  // Proximity Radar: register / update candidate in server matchmaking pool
+  useEffect(() => {
+    if (radarActive && coords) {
+      socket.emit('start_radar', {
+        coords,
+        preferredGames: preferredRadarGames,
+        user: userProfile
+      });
+    } else {
+      socket.emit('stop_radar');
+    }
+  }, [radarActive, coords, preferredRadarGames, userProfile]);
+
+  // Update coordinates if user moves while radar is active
+  useEffect(() => {
+    if (radarActive && coords) {
+      socket.emit('update_radar_location', { coords });
+    }
+  }, [coords, radarActive]);
+
+  // Listen for Matchmaking Alert & Server Errors
+  useEffect(() => {
+    const handleMatchAlert = (matchData) => {
+      setActiveMatchAlert(matchData);
+    };
+
+    const handleErrorMessage = (msg) => {
+      alert(`⚠️ ${msg}`);
+    };
+
+    socket.on('game_nearby_alert', handleMatchAlert);
+    socket.on('error_message', handleErrorMessage);
+
+    return () => {
+      socket.off('game_nearby_alert', handleMatchAlert);
+      socket.off('error_message', handleErrorMessage);
+    };
+  }, []);
+
+  const handleSelectCampusPreset = async (presetId) => {
+    const preset = CAMPUS_PRESETS.find(p => p.id === presetId);
+    if (!preset) return;
+    setCampusPreset(presetId);
+
+    if (preset.id === 'device') {
+      setLocationStatus('locating');
+      try {
+        const { coords: deviceCoords } = await requestDeviceLocation();
+        setCoords(deviceCoords);
+        setLocationStatus('active');
+        setLocationError(null);
+      } catch (err) {
+        setLocationStatus('error');
+        setLocationError(err.message);
+        // Fallback to library
+        const lib = CAMPUS_PRESETS.find(p => p.id === 'library');
+        setCoords(lib.coords);
+      }
+    } else {
+      setCoords(preset.coords);
+      setLocationStatus('active');
+      setLocationError(null);
+    }
+  };
+
+  const handleToggleRadar = () => {
+    sounds.playPop();
+    setRadarActive(prev => !prev);
+  };
+
+  const handleToggleRadarGame = (gameId) => {
+    setPreferredRadarGames(prev => {
+      if (prev.includes(gameId)) {
+        if (prev.length === 1) return prev; // keep at least 1
+        return prev.filter(g => g !== g && g !== gameId);
+      } else {
+        return [...prev, gameId];
+      }
+    });
+  };
+
+  const handleAcceptNearbyMatch = (matchData) => {
+    socket.emit('accept_nearby_match', {
+      matchId: matchData.matchId,
+      user: userProfile,
+      coords
+    }, (res) => {
+      if (res && res.success && res.roomId) {
+        setActiveMatchAlert(null);
+        setRadarActive(false);
+        handleJoinRoom(res.roomId);
+      } else {
+        alert(res?.error || 'Unable to join match.');
+      }
+    });
+  };
+
   const changeView = (nextView) => {
     const currentIdx = VIEW_ORDER[currentView] ?? 0;
     const nextIdx = VIEW_ORDER[nextView] ?? 0;
@@ -121,15 +252,17 @@ export default function App() {
 
   const handleJoinRoomByCode = (code) => {
     if (!code) return;
-    socket.emit('join_room_by_code', { code, user: userProfile }, (res) => {
+    socket.emit('join_room_by_code', { code, user: userProfile, coords }, (res) => {
       if (res && res.success && res.roomId) {
         handleJoinRoom(res.roomId);
+      } else if (res && res.error) {
+        alert(`❌ ${res.error}`);
       }
     });
   };
 
   const handleCreateRoom = (roomData) => {
-    socket.emit('create_room', roomData, (res) => {
+    socket.emit('create_room', { ...roomData, coords }, (res) => {
       if (res && res.success && res.roomId) {
         handleJoinRoom(res.roomId);
       }
@@ -182,6 +315,16 @@ export default function App() {
               onBackToLanding={() => changeView('landing')}
               theme={theme}
               onToggleTheme={toggleTheme}
+              coords={coords}
+              campusPreset={campusPreset}
+              onSelectCampusPreset={handleSelectCampusPreset}
+              locationStatus={locationStatus}
+              locationError={locationError}
+              radarActive={radarActive}
+              onToggleRadar={handleToggleRadar}
+              preferredRadarGames={preferredRadarGames}
+              onToggleRadarGame={handleToggleRadarGame}
+              nearbyRoomMap={nearbyRoomMap}
             />
           )}
 
@@ -193,10 +336,20 @@ export default function App() {
               onLeaveRoom={handleLeaveRoom}
               theme={theme}
               onToggleTheme={toggleTheme}
+              coords={coords}
             />
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Phase 4 Nearby Game Proximity Alert Notification Modal */}
+      {activeMatchAlert && (
+        <NearbyGameAlert
+          matchData={activeMatchAlert}
+          onAccept={handleAcceptNearbyMatch}
+          onDismiss={() => setActiveMatchAlert(null)}
+        />
+      )}
     </div>
   );
 }

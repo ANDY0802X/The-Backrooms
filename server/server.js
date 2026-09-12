@@ -250,6 +250,48 @@ defaultLounges.forEach(lounge => {
   });
 });
 
+// ==========================================
+// 2. PROXIMITY & GEOLOCATION ZERO-KNOWLEDGE ENGINE
+// ==========================================
+const EARTH_RADIUS_METERS = 6371000;
+
+function getHaversineDistance(lat1, lon1, lat2, lon2) {
+  if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return Infinity;
+  const toRad = (angle) => (angle * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(EARTH_RADIUS_METERS * c);
+}
+
+function formatDistanceBucket(meters) {
+  if (meters === Infinity || meters === null || meters === undefined) return 'Unknown';
+  if (meters <= 25) return '< 25m';
+  if (meters <= 50) return '~25–50m';
+  if (meters <= 100) return '~50–100m';
+  if (meters <= 200) return '~100–200m';
+  return '> 200m';
+}
+
+function getGameDisplayName(type) {
+  switch (type) {
+    case 'trivia': return 'Campus Trivia Blitz';
+    case 'wordchain': return 'Rapid Word Chain';
+    case 'emojipop': return 'Emoji Pop Reflex';
+    case 'truthvent': return 'Truth, Vent & Dare';
+    case 'scribble':
+    default: return 'Campus Scribble';
+  }
+}
+
+// In-Memory Anonymous Candidate Pool for Phase 4 Proximity Radar & Matchmaking
+// socketId -> { socketId, user, coords: { lat, lon }, preferredGames: string[], joinedAt: number, lastAlertAt: number }
+const proximityCandidates = new Map();
+const pendingMatches = new Map();
+
 function formatRoomForLobby(room) {
   return {
     id: room.id,
@@ -261,7 +303,10 @@ function formatRoomForLobby(room) {
     tags: room.tags || [],
     userCount: room.users ? room.users.size : 0,
     created: room.created,
-    isGameActive: room.game?.isActive || false
+    isGameActive: room.game?.isActive || false,
+    isProximity: !!room.isProximity,
+    radius: room.radius || 100
+    // NOTE: room.anchorCoords is NEVER sent to lobby/peers! Kept private in server RAM.
   };
 }
 
@@ -702,6 +747,12 @@ io.on('connection', (socket) => {
     const selectedGame = roomData.selectedGame || 'scribble';
     const roomCode = (roomData.code || roomId.replace('lounge-', '').slice(0, 6)).toUpperCase();
 
+    const isProximity = !!roomData.isProximity;
+    const radius = Number(roomData.radius) || 100;
+    const anchorCoords = (isProximity && roomData.coords?.lat !== undefined && roomData.coords?.lon !== undefined)
+      ? { lat: Number(roomData.coords.lat), lon: Number(roomData.coords.lon) }
+      : null;
+
     const newRoom = {
       id: roomId,
       code: roomCode,
@@ -712,6 +763,9 @@ io.on('connection', (socket) => {
       tags: roomData.tags || ['Ephemeral', 'Vent'],
       created: Date.now(),
       isPermanent: false,
+      isProximity,
+      radius,
+      anchorCoords, // Kept strictly private in server memory!
       users: new Map(),
       canvasStrokes: [],
       messages: [],
@@ -744,6 +798,32 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Query Nearby Rooms (Zero-Knowledge: returns distance bucket, never coordinates)
+  socket.on('get_nearby_rooms', (data, callback) => {
+    const coords = data?.coords;
+    if (!coords || typeof coords.lat !== 'number' || typeof coords.lon !== 'number') {
+      if (typeof callback === 'function') callback({ success: false, error: 'GPS coordinates required', nearbyMap: {} });
+      return;
+    }
+
+    const nearbyMap = {};
+    rooms.forEach((room) => {
+      if (room.isProximity && room.anchorCoords) {
+        const distance = getHaversineDistance(coords.lat, coords.lon, room.anchorCoords.lat, room.anchorCoords.lon);
+        const isNearby = distance <= (room.radius || 100) + 15; // 15m GPS jitter tolerance
+        nearbyMap[room.id] = {
+          isNearby,
+          distanceBucket: formatDistanceBucket(distance),
+          distanceMeters: distance
+        };
+      }
+    });
+
+    if (typeof callback === 'function') {
+      callback({ success: true, nearbyMap });
+    }
+  });
+
   // Join Room by Code
   socket.on('join_room_by_code', (data, callback) => {
     const rawCode = (typeof data === 'string' ? data : (data?.code || '')).trim().replace(/^#/, '').toUpperCase();
@@ -771,6 +851,7 @@ io.on('connection', (socket) => {
         tags: ['Private', 'Code-Room'],
         created: Date.now(),
         isPermanent: false,
+        isProximity: false,
         users: new Map(),
         canvasStrokes: [],
         messages: [],
@@ -798,17 +879,61 @@ io.on('connection', (socket) => {
       io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
     }
 
+    // Validate proximity if room is proximity-locked
+    if (targetRoom.isProximity && targetRoom.anchorCoords) {
+      const clientCoords = data?.coords;
+      if (!clientCoords || typeof clientCoords.lat !== 'number' || typeof clientCoords.lon !== 'number') {
+        if (typeof callback === 'function') {
+          callback({
+            success: false,
+            error: 'This lounge is locked to ~100m campus proximity. Please enable GPS or select a Campus Preset.'
+          });
+        }
+        return;
+      }
+
+      const distance = getHaversineDistance(clientCoords.lat, clientCoords.lon, targetRoom.anchorCoords.lat, targetRoom.anchorCoords.lon);
+      if (distance > (targetRoom.radius || 100) + 15) {
+        if (typeof callback === 'function') {
+          callback({
+            success: false,
+            error: `Outside room's ${targetRoom.radius || 100}m proximity zone (${formatDistanceBucket(distance)}).`
+          });
+        }
+        return;
+      }
+    }
+
     if (typeof callback === 'function') {
       callback({ success: true, roomId: targetRoom.id });
     }
   });
 
   // Join Room
-  socket.on('join_room', ({ roomId, user }) => {
+  socket.on('join_room', ({ roomId, user, coords }, callback) => {
     let room = rooms.get(roomId);
     if (!room) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Room does not exist or has expired.' });
       socket.emit('error_message', 'Room does not exist or has expired.');
       return;
+    }
+
+    // Server-Side Proximity Guard
+    if (room.isProximity && room.anchorCoords) {
+      if (!coords || typeof coords.lat !== 'number' || typeof coords.lon !== 'number') {
+        const errMsg = 'This lounge is locked to ~100m proximity. Please allow GPS or select a Campus Preset.';
+        if (typeof callback === 'function') callback({ success: false, error: errMsg });
+        socket.emit('error_message', errMsg);
+        return;
+      }
+
+      const distance = getHaversineDistance(coords.lat, coords.lon, room.anchorCoords.lat, room.anchorCoords.lon);
+      if (distance > (room.radius || 100) + 15) {
+        const errMsg = `Outside room's ${room.radius || 100}m proximity zone (${formatDistanceBucket(distance)}).`;
+        if (typeof callback === 'function') callback({ success: false, error: errMsg });
+        socket.emit('error_message', errMsg);
+        return;
+      }
     }
 
     if (currentRoomId && currentRoomId !== roomId) {
@@ -842,7 +967,9 @@ io.on('connection', (socket) => {
         category: room.category,
         selectedGame: room.game.type,
         description: room.description,
-        tags: room.tags
+        tags: room.tags,
+        isProximity: !!room.isProximity,
+        radius: room.radius || 100
       },
       activeUsers: Array.from(room.users.values()),
       canvasStrokes: room.canvasStrokes,
@@ -1098,12 +1225,217 @@ io.on('connection', (socket) => {
 
       io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
       currentRoomId = null;
+      proximityCandidates.delete(socket.id);
     }
   };
+
+  // In-session Periodic Proximity Verification Ping
+  socket.on('verify_proximity_ping', (data, callback) => {
+    const roomId = data?.roomId || currentRoomId;
+    const room = rooms.get(roomId);
+    if (!room || !room.isProximity || !room.anchorCoords) {
+      if (typeof callback === 'function') callback({ inRange: true });
+      return;
+    }
+
+    const coords = data?.coords;
+    if (!coords || typeof coords.lat !== 'number' || typeof coords.lon !== 'number') {
+      if (typeof callback === 'function') callback({ inRange: false, reason: 'No GPS data' });
+      return;
+    }
+
+    const distance = getHaversineDistance(coords.lat, coords.lon, room.anchorCoords.lat, room.anchorCoords.lon);
+    const inRange = distance <= (room.radius || 100) + 20;
+
+    if (!inRange) {
+      socket.emit('proximity_drift_warning', {
+        message: `You have drifted outside the ~${room.radius || 100}m proximity zone (${formatDistanceBucket(distance)}).`,
+        distanceBucket: formatDistanceBucket(distance)
+      });
+    }
+
+    if (typeof callback === 'function') {
+      callback({ inRange, distanceBucket: formatDistanceBucket(distance) });
+    }
+  });
+
+  // Phase 4: Proximity Radar & Matchmaking Events
+  socket.on('start_radar', (data, callback) => {
+    const coords = data?.coords;
+    if (!coords || typeof coords.lat !== 'number' || typeof coords.lon !== 'number') {
+      if (typeof callback === 'function') callback({ success: false, error: 'GPS coordinates required for radar' });
+      return;
+    }
+
+    proximityCandidates.set(socket.id, {
+      socketId: socket.id,
+      user: data?.user || currentUser || { name: 'Anonymous', avatar: '👻' },
+      coords: { lat: coords.lat, lon: coords.lon },
+      preferredGames: Array.isArray(data?.preferredGames) && data.preferredGames.length > 0
+        ? data.preferredGames
+        : ['scribble', 'trivia', 'wordchain', 'emojipop', 'truthvent'],
+      joinedAt: Date.now(),
+      lastAlertAt: 0
+    });
+
+    if (typeof callback === 'function') {
+      callback({ success: true, activeCandidatesCount: proximityCandidates.size });
+    }
+  });
+
+  socket.on('update_radar_location', (data) => {
+    const candidate = proximityCandidates.get(socket.id);
+    if (candidate && data?.coords && typeof data.coords.lat === 'number' && typeof data.coords.lon === 'number') {
+      candidate.coords = { lat: data.coords.lat, lon: data.coords.lon };
+    }
+  });
+
+  socket.on('stop_radar', () => {
+    proximityCandidates.delete(socket.id);
+  });
+
+  socket.on('accept_nearby_match', ({ matchId, user, coords }, callback) => {
+    const match = pendingMatches.get(matchId);
+    if (!match) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Match has expired or is no longer available.' });
+      return;
+    }
+
+    // Lazily spin up proximity room for this match if not created yet
+    if (!match.roomId) {
+      const newRoomId = `lounge-match-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const newRoom = {
+        id: newRoomId,
+        code: roomCode,
+        name: `Nearby ${match.gameName} Lounge 📍`,
+        category: 'Mini-Game',
+        selectedGame: match.game,
+        description: `Ephemeral room formed by ~100m proximity radar matching.`,
+        tags: ['Proximity', '100m-Zone', match.gameName],
+        created: Date.now(),
+        isPermanent: false,
+        isProximity: true,
+        radius: 100,
+        anchorCoords: match.anchorCoords, // Private in server RAM
+        users: new Map(),
+        canvasStrokes: [],
+        messages: [],
+        game: {
+          type: match.game,
+          isActive: false,
+          scores: {},
+          timerInterval: null,
+          timeLeft: 30,
+          currentDrawer: null,
+          currentWord: '',
+          revealedWord: '',
+          hasGuessed: new Set(),
+          triviaQuestion: null,
+          triviaAnswers: new Map(),
+          currentLetter: 'C',
+          lastWord: 'Campus',
+          wordHistory: ['Campus'],
+          streakCount: 1,
+          currentPrompt: null,
+          emojiTargets: []
+        }
+      };
+      rooms.set(newRoomId, newRoom);
+      match.roomId = newRoomId;
+      io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+    }
+
+    proximityCandidates.delete(socket.id);
+
+    if (typeof callback === 'function') {
+      callback({ success: true, roomId: match.roomId });
+    }
+  });
 
   socket.on('leave_room', handleLeave);
   socket.on('disconnect', handleLeave);
 });
+
+// Proximity Matchmaking Scanner: clusters nearby candidates within 100m
+function scanProximityCandidates() {
+  if (proximityCandidates.size < 2) return;
+  const now = Date.now();
+  const candidateList = Array.from(proximityCandidates.values());
+
+  // Prune inactive candidates older than 5 minutes
+  for (const c of candidateList) {
+    if (now - c.joinedAt > 300000) {
+      proximityCandidates.delete(c.socketId);
+    }
+  }
+
+  for (let i = 0; i < candidateList.length; i++) {
+    const leader = candidateList[i];
+    if (now - leader.lastAlertAt < 35000) continue; // 35s cooldown per candidate
+
+    const cluster = [leader];
+    for (let j = 0; j < candidateList.length; j++) {
+      if (i === j) continue;
+      const peer = candidateList[j];
+      if (now - peer.lastAlertAt < 35000) continue;
+
+      const dist = getHaversineDistance(leader.coords.lat, leader.coords.lon, peer.coords.lat, peer.coords.lon);
+      if (dist <= 100) {
+        const commonGame = leader.preferredGames.find(g => peer.preferredGames.includes(g));
+        if (commonGame) {
+          cluster.push(peer);
+          if (cluster.length >= 6) break; // Match up to 6 players
+        }
+      }
+    }
+
+    if (cluster.length >= 2) {
+      // Tally games
+      const gameCounts = {};
+      cluster.forEach(c => {
+        c.preferredGames.forEach(g => {
+          gameCounts[g] = (gameCounts[g] || 0) + 1;
+        });
+      });
+      const chosenGame = Object.entries(gameCounts).sort((a, b) => b[1] - a[1])[0][0] || 'scribble';
+      const matchId = `match-${now}-${Math.random().toString(36).slice(2, 6)}`;
+
+      pendingMatches.set(matchId, {
+        matchId,
+        game: chosenGame,
+        gameName: getGameDisplayName(chosenGame),
+        members: new Set(cluster.map(c => c.socketId)),
+        anchorCoords: { lat: leader.coords.lat, lon: leader.coords.lon },
+        createdAt: now,
+        roomId: null
+      });
+
+      cluster.forEach(c => {
+        c.lastAlertAt = now;
+        io.to(c.socketId).emit('game_nearby_alert', {
+          matchId,
+          game: chosenGame,
+          gameName: getGameDisplayName(chosenGame),
+          playerCount: cluster.length,
+          expiresIn: 20
+        });
+      });
+    }
+  }
+}
+
+setInterval(scanProximityCandidates, 3500);
+
+// Cleanup expired matches every 10s
+setInterval(() => {
+  const now = Date.now();
+  for (const [matchId, match] of pendingMatches.entries()) {
+    if (now - match.createdAt > 30000) {
+      pendingMatches.delete(matchId);
+    }
+  }
+}, 10000);
 
 app.get('/api/health', (req, res) => {
   res.json({

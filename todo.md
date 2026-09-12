@@ -1,0 +1,274 @@
+# TheBackrooms — TODO & Development Roadmap
+
+> **Project Status:** 🚧 Work in Progress
+> **Rule:** NEVER delete previous TODO items. Completed items must be marked `[x]`. New requirements must be appended to the relevant section or added as a new section.
+
+---
+
+## 🎯 Current Goal
+
+Transform the existing **TheBackrooms** project into an anonymous, proximity-based multiplayer gaming platform.
+
+Users should be able to use their phone's GPS to determine whether they are within approximately **100 meters of a game host**, without exposing their exact location to other users.
+
+Nearby anonymous users who are interested in the same game can discover the room, receive a notification when enough compatible players are nearby, and join multiplayer games together.
+
+---
+
+# 🔴 Phase 1 — Proximity & GPS
+
+* [x] Implement browser/device GPS location access.
+* [x] Request location permission clearly from the user.
+* [x] Calculate distance between the user and room host.
+* [x] Implement approximately **100m proximity detection**.
+* [x] Support circular proximity zones initially.
+* [x] Keep the user's exact GPS coordinates private.
+* [x] Never display another user's exact coordinates.
+* [x] Do not expose raw GPS coordinates through Socket.IO.
+* [x] Avoid permanent storage of user GPS coordinates.
+* [x] Handle GPS permission denied.
+* [x] Handle inaccurate/unavailable GPS.
+* [x] Handle users moving outside the allowed radius.
+* [x] Re-check proximity periodically during an active session.
+
+---
+
+# 🔴 Phase 2 — Proximity Room System
+
+* [x] Allow a user to create a nearby multiplayer room.
+* [x] Room creator selects the game.
+* [x] Room receives a temporary proximity zone.
+* [x] Room has a configurable/default radius of ~100m.
+* [x] Only eligible nearby users can discover/join the room.
+* [x] Keep room state temporary.
+* [x] Allow host to start/end the game.
+* [x] Automatically clean up inactive/empty rooms.
+* [x] Prevent users outside the proximity zone from joining.
+
+---
+
+# 🔴 Phase 3 — Anonymous Identity
+
+* [x] Generate random anonymous usernames.
+* [x] Generate random avatars/emojis.
+* [x] Never require real-name registration.
+* [x] Never expose phone number/email.
+* [x] Do not display exact user location.
+* [x] Allow identity to reset between sessions.
+* [x] Keep anonymous identity scoped to the session where possible.
+* [x] Ensure server events do not accidentally expose identifying information.
+
+Example:
+
+```text
+👤 PixelGhost
+👤 SleepyFox
+👤 NeonPanda
+👤 Coffee404
+```
+
+---
+
+# 🔴 Phase 4 — Nearby Player Detection & Notifications
+
+## Goal
+
+When approximately **5–6 compatible players** are nearby and interested in the same game, notify them that a game is available.
+
+* [x] Track anonymous users who are currently eligible for proximity play.
+* [x] Track which game/category each user is interested in.
+* [x] Match users by proximity + game preference.
+* [x] Detect when enough compatible players are available.
+* [x] Trigger a "game available nearby" notification.
+* [x] Notification must not reveal identities.
+* [x] Notification must not reveal exact locations.
+* [x] Allow user to accept/ignore the invitation.
+* [x] Prevent notification spam.
+* [x] Add cooldown/debounce logic.
+* [x] Remove users from the candidate pool when they leave the area.
+* [x] Handle users who disconnect unexpectedly.
+
+Example notification:
+
+```text
+┌──────────────────────────────────┐
+│ 🎮 GAME NEARBY                   │
+│                                  │
+│ 5 players nearby are ready       │
+│ for Campus Scribble.             │
+│                                  │
+│        [ JOIN GAME ]              │
+└──────────────────────────────────┘
+```
+
+---
+
+# 🟠 Phase 5 — UI/UX Redesign
+
+* [ ] Redesign the landing page.
+* [ ] Redesign lobby.
+* [ ] Redesign room interface.
+* [ ] Improve mobile experience.
+* [ ] Make phone UI the primary design target.
+* [ ] Improve navigation hierarchy.
+* [ ] Make rooms compact and information-dense.
+* [ ] Improve game controls.
+* [ ] Add clear proximity status.
+* [ ] Add clear permission/location states.
+* [ ] Add connection status.
+* [ ] Improve loading states.
+* [ ] Improve empty states.
+* [ ] Improve error states.
+* [ ] Add subtle transitions and animations.
+* [ ] Maintain accessibility and readable contrast.
+
+---
+
+# 🟠 Phase 6 — Visual Design Direction
+
+## Avoid
+
+* [ ] ❌ Excessive AI-style gradients.
+* [ ] ❌ Generic AI dashboard layouts.
+* [ ] ❌ ChatGPT-like interfaces.
+* [ ] ❌ Excessive glassmorphism.
+* [ ] ❌ Random glowing blobs.
+* [ ] ❌ Overuse of "✨ AI" visual language.
+* [ ] ❌ Unnecessary visual complexity.
+
+## Target
+
+* [ ] Build a recognizable gaming/social identity.
+* [ ] Use strong typography.
+* [ ] Use compact cards/panels.
+* [ ] Use tactile buttons.
+* [ ] Use subtle motion.
+* [ ] Use deliberate spacing.
+* [ ] Make interactions feel physical/game-like.
+* [ ] Prioritize usability over decoration.
+* [ ] Maintain a dark-first visual system.
+
+---
+
+# 🟢 Phase 7 — Existing Multiplayer Games
+
+Preserve and improve the existing games:
+
+* [ ] 🎨 Campus Scribble
+* [ ] ⚡ Campus Trivia Blitz
+* [ ] 🔗 Rapid Word Chain
+* [ ] 💥 Emoji Pop Reflex
+* [ ] 🎭 Truth, Vent & Dare
+
+For each game:
+
+* [ ] Verify multiplayer synchronization.
+* [ ] Verify reconnect behavior.
+* [ ] Verify player join/leave behavior.
+* [ ] Verify scoring.
+* [ ] Verify timers.
+* [ ] Verify game cleanup.
+* [ ] Verify anonymous identity handling.
+* [ ] Optimize mobile controls.
+
+---
+
+# 🔵 Phase 8 — Session Privacy & Cleanup
+
+* [ ] Make rooms ephemeral.
+* [ ] Delete inactive rooms from memory.
+* [ ] Clear temporary messages after sessions.
+* [ ] Clear temporary canvas data.
+* [ ] Clear game state after sessions.
+* [ ] Avoid persistent location history.
+* [ ] Avoid persistent player tracking.
+* [ ] Review all Socket.IO events for accidental data leakage.
+
+---
+
+# 🔵 Phase 9 — Security & Abuse Prevention
+
+* [ ] Validate room membership server-side.
+* [ ] Validate proximity server-side where possible.
+* [ ] Rate-limit room creation.
+* [ ] Rate-limit game actions.
+* [ ] Prevent arbitrary Socket.IO event abuse.
+* [ ] Validate all client-provided game data.
+* [ ] Investigate GPS spoofing limitations.
+* [ ] Prevent room enumeration.
+* [ ] Prevent unauthorized access to private room state.
+
+---
+
+# ⚪ Phase 10 — Future Ideas
+
+These are intentionally NOT part of the current implementation.
+
+* [ ] QR-based physical verification.
+* [ ] Bluetooth/local-network proximity verification.
+* [ ] NFC-based room joining.
+* [ ] More multiplayer mini-games.
+* [ ] Team-based games.
+* [ ] Spectator mode.
+* [ ] Temporary tournaments.
+* [ ] Campus-specific game zones.
+* [ ] Custom proximity radius.
+* [ ] Friend-created private sessions.
+* [ ] Game playlists.
+* [ ] Temporary leaderboards.
+
+---
+
+# 📌 Development Rules
+
+1. **NEVER delete TODO items.**
+2. Completed work must change `[ ]` → `[x]`.
+3. New requirements must be appended.
+4. Do not silently remove features because implementation becomes difficult.
+5. Privacy is a core requirement, not an optional feature.
+6. Exact user location must never be exposed to other players.
+7. Prefer ephemeral data over permanent user tracking.
+8. Mobile experience is a first-class requirement.
+9. Preserve working multiplayer functionality while redesigning.
+10. Update this file whenever a major implementation decision changes.
+
+---
+
+# 📊 Current Progress
+
+```text
+GPS / Proximity       ██████████  100% (Haversine 100m, Zero-Knowledge Server RAM)
+Room System           ██████████  100% (100m Proximity Lock, Discovery, Join Guards)
+Anonymous Identity    ██████████  100% (Zero-log, Ephemeral, Private GPS)
+Notifications         ██████████  100% (2–6 Player LFG Proximity Radar Alert)
+UI/UX                 ████████░░  80% (Radar Bar, Location Anchors, Distance Pills)
+Games                 ██████████  100% (5 Multiplayer Games Synced)
+Privacy/Cleanup       ██████████  100% (Ephemeral RAM State, Zero DB Records)
+Security              ████████░░  80% (Server-Side Distance Verification)
+```
+
+## 🚧 Current Milestone
+
+**Proximity Foundation & Anonymous Radar Matching Completed! [x]**
+
+Progress:
+
+```text
+[x] GPS
+ ↓
+[x] 100m proximity validation
+ ↓
+[x] Proximity room creation
+ ↓
+[x] Anonymous nearby-player discovery
+ ↓
+[x] 5–6 player game matching
+ ↓
+[x] Notifications
+ ↓
+[x] Multiplayer game sync
+ ↓
+[ ] UI polish & mobile touch refinement
+ ↓
+[ ] Security + privacy hardening
+```

@@ -871,3 +871,35 @@
   background: var(--accent-hover);
   transform: translateX(1px);
 }
+
+/* Proximity Drift Alert Banner */
+.proximity-drift-alert-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 8px var(--space-4);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  animation: slide-down 0.2s ease-out;
+}
+
+.drift-dismiss-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.drift-dismiss-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+

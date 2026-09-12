@@ -23,7 +23,8 @@ export default function RoomView({
   userProfile,
   onLeaveRoom,
   theme = 'dark',
-  onToggleTheme
+  onToggleTheme,
+  coords
 }) {
   // Room state
   const [roomData, setRoomData] = useState({
@@ -32,7 +33,9 @@ export default function RoomView({
     category: 'General',
     selectedGame: 'scribble',
     description: '',
-    tags: []
+    tags: [],
+    isProximity: false,
+    radius: 100
   });
   const [activeUsers, setActiveUsers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -41,6 +44,7 @@ export default function RoomView({
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [floatingParticles, setFloatingParticles] = useState([]);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [proximityDriftWarning, setProximityDriftWarning] = useState(null);
 
   // Multi-Game State
   const [gameState, setGameState] = useState({
@@ -98,9 +102,9 @@ export default function RoomView({
 
   // Copy Room Code
   const handleCopyRoomCode = () => {
-    const code = roomData.code || roomId.replace('lounge-', '').slice(0, 6).toUpperCase();
+    const displayCode = roomData.code || roomId.replace('lounge-', '').slice(0, 6).toUpperCase();
     try {
-      navigator.clipboard.writeText(code);
+      navigator.clipboard.writeText(displayCode);
       sounds.playPop();
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
@@ -111,7 +115,7 @@ export default function RoomView({
   useEffect(() => {
     if (!socket) return;
 
-    socket.emit('join_room', { roomId, user: userProfile });
+    socket.emit('join_room', { roomId, user: userProfile, coords });
 
     socket.on('room_joined_data', (data) => {
       if (data.room) setRoomData(data.room);
@@ -136,6 +140,10 @@ export default function RoomView({
 
     socket.on('active_users_update', ({ activeUsers: usersList }) => {
       setActiveUsers(usersList || []);
+    });
+
+    socket.on('proximity_drift_warning', ({ message }) => {
+      setProximityDriftWarning(message);
     });
 
     socket.on('new_message', (msg) => {
@@ -265,6 +273,24 @@ export default function RoomView({
       socket.emit('leave_room', { roomId });
     };
   }, [socket, roomId, userProfile]);
+
+  // Periodic In-Session Proximity Verification Ping (18s)
+  useEffect(() => {
+    if (!socket || !roomId || !roomData.isProximity) return;
+
+    const pingProximity = () => {
+      socket.emit('verify_proximity_ping', { roomId, coords }, (res) => {
+        if (res && res.inRange === false) {
+          setProximityDriftWarning(`You have drifted outside the ~${roomData.radius || 100}m campus proximity zone.`);
+        } else {
+          setProximityDriftWarning(null);
+        }
+      });
+    };
+
+    const interval = setInterval(pingProximity, 18000);
+    return () => clearInterval(interval);
+  }, [socket, roomId, roomData.isProximity, coords, roomData.radius]);
 
   const triggerReactionParticle = (emoji) => {
     const newParticle = {
@@ -508,6 +534,11 @@ export default function RoomView({
             <span className="badge-pill hover-lift" style={{ background: 'var(--bg-well)', color: 'var(--accent-lavender)' }}>
               {roomData.category}
             </span>
+            {roomData.isProximity && (
+              <span className="badge-pill font-mono" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                📍 ~{roomData.radius || 100}m Zone
+              </span>
+            )}
           </div>
 
           {/* Room Code Badge */}
@@ -586,6 +617,19 @@ export default function RoomView({
           </motion.button>
         </div>
       </header>
+
+      {proximityDriftWarning && (
+        <div className="proximity-drift-alert-banner font-mono">
+          <span>⚠️ {proximityDriftWarning}</span>
+          <button
+            type="button"
+            className="drift-dismiss-btn"
+            onClick={() => setProximityDriftWarning(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Main Split Layout: Left In-Window Arena | Right Real-Time Chat */}
       <main className="room-split-layout">

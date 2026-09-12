@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Lobby.css';
 import { sounds } from '../utils/sound';
+import { CAMPUS_PRESETS } from '../utils/geolocation';
 
-const CATEGORIES = ['All', 'General', 'Study', 'Rant', 'Art', 'Mini-Game'];
+const CATEGORIES = ['All', '📍 Nearby (<100m)', 'General', 'Study', 'Rant', 'Art', 'Mini-Game'];
 
 const GAME_OPTIONS = [
   { id: 'scribble', name: '🎨 Campus Scribble (Speed Pictionary)' },
@@ -24,7 +25,17 @@ export default function Lobby({
   onBackToLanding,
   theme = 'dark',
   onToggleTheme,
-  socket
+  socket,
+  coords,
+  campusPreset,
+  onSelectCampusPreset,
+  locationStatus,
+  locationError,
+  radarActive,
+  onToggleRadar,
+  preferredRadarGames = [],
+  onToggleRadarGame,
+  nearbyRoomMap = {}
 }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,9 +49,17 @@ export default function Lobby({
   const [newRoomGame, setNewRoomGame] = useState('scribble');
   const [newRoomDesc, setNewRoomDesc] = useState('');
   const [newRoomTags, setNewRoomTags] = useState('');
+  const [newRoomProximity, setNewRoomProximity] = useState(true);
+  const [newRoomRadius, setNewRoomRadius] = useState(100);
 
   const filteredRooms = rooms.filter(room => {
-    const matchesCat = selectedCategory === 'All' || room.category === selectedCategory;
+    let matchesCat = true;
+    if (selectedCategory === '📍 Nearby (<100m)') {
+      matchesCat = room.isProximity && nearbyRoomMap[room.id]?.isNearby;
+    } else if (selectedCategory !== 'All') {
+      matchesCat = room.category === selectedCategory;
+    }
+
     const query = searchQuery.toLowerCase().trim();
     if (!query) return matchesCat;
     const matchesSearch =
@@ -62,7 +81,10 @@ export default function Lobby({
       category: newRoomCategory,
       selectedGame: newRoomGame,
       description: newRoomDesc.trim() || 'A chill space to decompress.',
-      tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean)
+      tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean),
+      isProximity: newRoomProximity,
+      radius: newRoomRadius,
+      coords
     });
 
     setIsModalOpen(false);
@@ -181,12 +203,81 @@ export default function Lobby({
         </div>
       </header>
 
+      {/* Phase 1 & 4: Proximity Radar & Campus GPS Bar */}
+      <section className="proximity-radar-bar">
+        <div className="radar-status-group">
+          <div className={`radar-indicator-pill ${radarActive ? 'active' : ''}`}>
+            <span className={`radar-dot ${radarActive ? 'pulsing' : ''}`}></span>
+            <span className="radar-status-text font-mono">
+              {radarActive ? 'RADAR ACTIVE • SCANNING ~100m' : 'PROXIMITY RADAR IDLE'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className={`radar-toggle-btn font-mono ${radarActive ? 'active' : ''}`}
+            onClick={onToggleRadar}
+          >
+            {radarActive ? '⏹ Stop Radar' : '📡 Find Nearby Players (100m)'}
+          </button>
+        </div>
+
+        {/* Location / Campus Preset Selector for Zero-Hassle Desktop & Tab Testing */}
+        <div className="campus-location-selector">
+          <label className="location-label font-mono">📍 GPS Anchor:</label>
+          <select
+            className="location-select font-mono"
+            value={campusPreset}
+            onChange={(e) => onSelectCampusPreset(e.target.value)}
+            title="Switch simulated campus location or use real GPS sensor"
+          >
+            {CAMPUS_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+          {locationStatus === 'locating' && (
+            <span className="location-loading-spinner font-mono">⌛ Locating...</span>
+          )}
+          {locationError && (
+            <span className="location-err-text font-mono" title={locationError}>⚠️ Denied</span>
+          )}
+        </div>
+
+        {/* Radar Game Preferences (When radar is enabled) */}
+        {radarActive && (
+          <div className="radar-game-preference-row">
+            <span className="radar-pref-label font-mono">Matching for:</span>
+            <div className="radar-game-pills">
+              {GAME_OPTIONS.map((g) => {
+                const isSelected = preferredRadarGames.includes(g.id);
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className={`radar-game-pill font-mono ${isSelected ? 'selected' : ''}`}
+                    onClick={() => onToggleRadarGame(g.id)}
+                  >
+                    {g.name.split(' ')[0]} {g.name.split(' ')[1]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* Main Filter & Search Toolbar */}
       <section className="lobby-toolbar">
         {/* Segmented Category Control (Linear/Notion Style) */}
         <div className="category-segmented-strip font-mono">
           {CATEGORIES.map(cat => {
-            const count = cat === 'All' ? rooms.length : rooms.filter(r => r.category === cat).length;
+            let count = 0;
+            if (cat === 'All') count = rooms.length;
+            else if (cat === '📍 Nearby (<100m)') count = rooms.filter(r => r.isProximity && nearbyRoomMap[r.id]?.isNearby).length;
+            else count = rooms.filter(r => r.category === cat).length;
+
             const isActive = selectedCategory === cat;
             return (
               <button
@@ -247,10 +338,14 @@ export default function Lobby({
           <div className="rooms-grid">
             {filteredRooms.map((room) => {
               const roomCode = room.code || room.id.replace('lounge-', '').slice(0, 6).toUpperCase();
+              const proxInfo = nearbyRoomMap[room.id];
+              const isProx = room.isProximity;
+              const isOutOfRange = isProx && proxInfo && !proxInfo.isNearby;
+
               return (
                 <div
                   key={room.id}
-                  className="room-flat-card"
+                  className={`room-flat-card ${isOutOfRange ? 'out-of-range' : ''}`}
                   onClick={() => {
                     sounds.playChime();
                     onJoinRoom(room.id);
@@ -258,9 +353,21 @@ export default function Lobby({
                 >
                   {/* Card Meta Top */}
                   <div className="card-top-meta">
-                    <span className="card-game-pill font-mono">
-                      {getGameBadge(room.selectedGame)}
-                    </span>
+                    <div className="card-badge-group">
+                      <span className="card-game-pill font-mono">
+                        {getGameBadge(room.selectedGame)}
+                      </span>
+                      {isProx && (
+                        <span className={`card-proximity-pill font-mono ${isOutOfRange ? 'out-of-range' : 'in-range'}`}>
+                          📍 ~{room.radius || 100}m
+                        </span>
+                      )}
+                      {proxInfo && (
+                        <span className="card-distance-pill font-mono">
+                          {proxInfo.distanceBucket}
+                        </span>
+                      )}
+                    </div>
                     <div className="card-presence-indicator font-mono">
                       <span className="card-presence-dot"></span>
                       <span>{room.userCount || 1} online</span>
@@ -294,7 +401,9 @@ export default function Lobby({
                         <span key={i} className="card-tag">#{tag}</span>
                       ))}
                     </div>
-                    <span className="card-action-hint font-mono">Join ➔</span>
+                    <span className="card-action-hint font-mono">
+                      {isOutOfRange ? '🚫 Outside 100m' : 'Join ➔'}
+                    </span>
                   </div>
                 </div>
               );
@@ -352,7 +461,7 @@ export default function Lobby({
                       value={newRoomCategory}
                       onChange={(e) => setNewRoomCategory(e.target.value)}
                     >
-                      {CATEGORIES.filter(c => c !== 'All').map(c => (
+                      {CATEGORIES.filter(c => c !== 'All' && !c.includes('Nearby')).map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
@@ -382,6 +491,37 @@ export default function Lobby({
                       <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* Phase 2: Proximity Zone Toggle */}
+                <div className="modal-field proximity-toggle-field">
+                  <div className="proximity-toggle-header">
+                    <label className="proximity-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={newRoomProximity}
+                        onChange={(e) => setNewRoomProximity(e.target.checked)}
+                        className="proximity-checkbox"
+                      />
+                      <span className="proximity-toggle-title">📍 Lock to ~100m Campus Proximity Zone</span>
+                    </label>
+                    {newRoomProximity && (
+                      <select
+                        className="modal-select-sm font-mono"
+                        value={newRoomRadius}
+                        onChange={(e) => setNewRoomRadius(Number(e.target.value))}
+                      >
+                        <option value={50}>50m (Same Floor)</option>
+                        <option value={100}>100m (Standard Zone)</option>
+                        <option value={200}>200m (Quad Sector)</option>
+                      </select>
+                    )}
+                  </div>
+                  <p className="proximity-note font-mono">
+                    {newRoomProximity
+                      ? `🔒 Only students physically within ~${newRoomRadius}m of your current GPS anchor can discover or join. Exact coordinates are NEVER revealed to peers.`
+                      : `🔓 Open worldwide. Anyone with the code or browsing the lobby can join.`}
+                  </p>
                 </div>
 
                 <div className="modal-field">
