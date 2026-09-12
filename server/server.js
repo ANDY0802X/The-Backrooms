@@ -2,54 +2,16 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
-
-const ALLOWED_ORIGINS = [
-  'https://ycrxi75f.insforge.site',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:4173'
-];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (
-      ALLOWED_ORIGINS.includes(origin) ||
-      origin.endsWith('.insforge.site') ||
-      origin.endsWith('.onrender.com') ||
-      origin.includes('localhost')
-    ) {
-      return callback(null, true);
-    }
-    return callback(null, true);
-  },
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
-});
-
-app.get('/', (req, res) => {
-  res.send('🌌 TheBackrooms Socket.io backend is live and healthy!');
-});
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: (origin, callback) => {
-      callback(null, true);
-    },
-    methods: ['GET', 'POST'],
-    credentials: true
+    origin: '*',
+    methods: ['GET', 'POST']
   }
 });
 
@@ -251,7 +213,7 @@ defaultLounges.forEach(lounge => {
 function formatRoomForLobby(room) {
   return {
     id: room.id,
-    code: room.code || (room.id.startsWith('lounge-') ? room.id.replace('lounge-', '').slice(0, 6).toUpperCase() : room.id.slice(0, 6).toUpperCase()),
+    code: room.code || (room.id.replace('lounge-', '').slice(0, 6).toUpperCase()),
     name: room.name,
     category: room.category,
     selectedGame: room.game?.type || room.selectedGame || 'scribble',
@@ -270,6 +232,294 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/rooms', (req, res) => {
   res.json(Array.from(rooms.values()).map(formatRoomForLobby));
+});
+
+// ==========================================
+// 2.5 PIN REGISTRY (CAMPUS MAP SYSTEM)
+// ==========================================
+const pins = new Map();
+
+// Helper to seed marketplace rooms
+function createMarketRoom(id, code, title, price, listingType, description, creator) {
+  const room = {
+    id,
+    code,
+    name: `🏷️ ${title} (${price})`,
+    category: 'General',
+    selectedGame: 'scribble',
+    description: `Negotiation lounge for "${title}". Price: ${price} (${listingType.toUpperCase()}). ${description}`,
+    tags: ['Marketplace', listingType.toUpperCase()],
+    created: Date.now(),
+    isPermanent: true,
+    users: new Map(),
+    canvasStrokes: [],
+    messages: [
+      {
+        id: `sys-market-${Date.now()}`,
+        sender: { name: '🏷️ Campus Market Bot', color: '#10b981', avatar: '🏷️' },
+        text: `Listing open: "${title}" for ${price} (${listingType.toUpperCase()}). Use this lounge to chat, negotiate, and arrange campus pickup!`,
+        timestamp: Date.now(),
+        isSystem: true
+      }
+    ],
+    game: {
+      type: 'scribble',
+      isActive: false,
+      scores: {},
+      timerInterval: null,
+      timeLeft: 30,
+      currentDrawer: null,
+      currentWord: '',
+      revealedWord: '',
+      hasGuessed: new Set(),
+      triviaQuestion: null,
+      triviaAnswers: new Map(),
+      currentLetter: 'C',
+      lastWord: 'Campus',
+      wordHistory: ['Campus'],
+      streakCount: 1,
+      currentPrompt: null,
+      emojiTargets: []
+    }
+  };
+  rooms.set(id, room);
+  return room;
+}
+
+// Seed initial marketplace rooms
+createMarketRoom(
+  'room-mkt-ti84',
+  'TI84',
+  'TI-84 Plus Graphing Calculator',
+  '$25',
+  'sell',
+  'Barely used, includes slide cover and USB cable.',
+  { name: 'Senior Dev', avatar: '🎓', color: '#3b82f6' }
+);
+
+createMarketRoom(
+  'room-mkt-chair',
+  'CHAIR',
+  'Ergonomic Mesh Desk Chair',
+  '$10/mo',
+  'rent',
+  'Great lumbar support, adjustable height and armrests.',
+  { name: 'Campus Hopper', avatar: '⚡', color: '#10b981' }
+);
+
+createMarketRoom(
+  'room-mkt-math',
+  'MATH8',
+  'Discrete Mathematics (Rosen 8th Ed)',
+  'Trade',
+  'trade',
+  'Looking to trade for Algorithms (CLRS) or Data Structures book.',
+  { name: 'Algo Enthusiast', avatar: '🦉', color: '#8b5cf6' }
+);
+
+// Initial Default Pins with real coordinates from map.geojson (IIITDM Jabalpur campus)
+const defaultPins = [
+  // 1. Social Room Pins (🗣️)
+  {
+    id: 'pin-room-midnight-coffee',
+    type: 'room',
+    lat: 23.1762,
+    lng: 80.0275,
+    title: 'Midnight Espresso ☕',
+    createdBy: { name: 'Barista Cat', avatar: '🐱', color: '#f59e0b' },
+    createdAt: Date.now() - 3600000,
+    roomId: 'lounge-midnight-coffee',
+    category: 'Study',
+    selectedGame: 'scribble',
+    description: 'Quiet crammers & 2AM chill lo-fi energy. Synchronized canvas & cozy chat.',
+    tags: ['Quiet', 'Lo-Fi', 'Study']
+  },
+  {
+    id: 'pin-room-scribble-arena',
+    type: 'room',
+    lat: 23.1755,
+    lng: 80.0305,
+    title: 'Campus Scribble Arena 🎨',
+    createdBy: { name: 'Pixel Artist', avatar: '🎨', color: '#ec4899' },
+    createdAt: Date.now() - 7200000,
+    roomId: 'lounge-scribble-arena',
+    category: 'Mini-Game',
+    selectedGame: 'scribble',
+    description: 'Speed Pictionary rounds with campus prompts. Guess fast & score points!',
+    tags: ['Drawing', 'Fast-Paced', 'Pictionary']
+  },
+  {
+    id: 'pin-room-trivia-blitz',
+    type: 'room',
+    lat: 23.1740,
+    lng: 80.0280,
+    title: 'Campus Trivia Blitz ⚡',
+    createdBy: { name: 'Quiz Whiz', avatar: '⚡', color: '#3b82f6' },
+    createdAt: Date.now() - 5400000,
+    roomId: 'lounge-trivia-blitz',
+    category: 'Mini-Game',
+    selectedGame: 'trivia',
+    description: 'Rapid-fire campus & tech trivia showdown. 14 seconds per question!',
+    tags: ['Trivia', 'Buzzer', 'Challenge']
+  },
+  {
+    id: 'pin-room-truth-vent',
+    type: 'room',
+    lat: 23.1770,
+    lng: 80.0315,
+    title: 'Truth, Vent & Dare 🎭',
+    createdBy: { name: 'Anonymous Owl', avatar: '🦉', color: '#8b5cf6' },
+    createdAt: Date.now() - 1800000,
+    roomId: 'lounge-truth-vent',
+    category: 'Rant',
+    selectedGame: 'truthvent',
+    description: 'Zero-filter campus confessionals, cathartic vents, and hilarious dares.',
+    tags: ['Confessions', 'Venting', 'Cathartic']
+  },
+
+  // 2. Marketplace Pins (🏷️)
+  {
+    id: 'pin-mkt-ti84',
+    type: 'marketplace',
+    lat: 23.1768,
+    lng: 80.0268,
+    title: 'TI-84 Plus Graphing Calculator',
+    createdBy: { name: 'Senior Dev', avatar: '🎓', color: '#3b82f6' },
+    createdAt: Date.now() - 4000000,
+    roomId: 'room-mkt-ti84',
+    marketData: {
+      price: '$25',
+      listingType: 'sell',
+      photoUrl: 'https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?w=400&auto=format&fit=crop&q=80',
+      condition: 'Like New',
+      comments: [
+        {
+          id: 'tc-1',
+          author: { name: 'CS Junior', avatar: '💻', color: '#3b82f6' },
+          text: 'Is this still available? Can meet at the Library entrance at 4 PM!',
+          offer: '$20 Cash',
+          createdAt: Date.now() - 3600000
+        },
+        {
+          id: 'tc-2',
+          author: { name: 'Senior Dev', avatar: '🎓', color: '#3b82f6' },
+          text: 'Yes! $20 works if you can meet today. Let me know!',
+          offer: null,
+          createdAt: Date.now() - 1800000
+        }
+      ]
+    }
+  },
+  {
+    id: 'pin-mkt-chair',
+    type: 'marketplace',
+    lat: 23.1735,
+    lng: 80.0320,
+    title: 'Ergonomic Mesh Desk Chair',
+    createdBy: { name: 'Campus Hopper', avatar: '⚡', color: '#10b981' },
+    createdAt: Date.now() - 86400000,
+    roomId: 'room-mkt-chair',
+    marketData: {
+      price: '$10/mo',
+      listingType: 'rent',
+      photoUrl: 'https://images.unsplash.com/photo-1580481077197-2023a85b1411?w=400&auto=format&fit=crop&q=80',
+      condition: 'Excellent',
+      comments: [
+        {
+          id: 'tc-3',
+          author: { name: 'Dorm Styler', avatar: '🛋️', color: '#ec4899' },
+          text: 'Does this recline? Looking to rent for the whole semester.',
+          offer: '$40 Semester',
+          createdAt: Date.now() - 43200000
+        }
+      ]
+    }
+  },
+  {
+    id: 'pin-mkt-math',
+    type: 'marketplace',
+    lat: 23.1758,
+    lng: 80.0288,
+    title: 'Discrete Mathematics (Rosen 8th Ed)',
+    createdBy: { name: 'Algo Enthusiast', avatar: '🦉', color: '#8b5cf6' },
+    createdAt: Date.now() - 12000000,
+    roomId: 'room-mkt-math',
+    marketData: {
+      price: 'Trade',
+      listingType: 'trade',
+      photoUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&auto=format&fit=crop&q=80',
+      condition: 'Good',
+      comments: [
+        {
+          id: 'tc-4',
+          author: { name: 'Math Major', avatar: '📐', color: '#f59e0b' },
+          text: 'Would you swap this for Linear Algebra 4th Edition?',
+          offer: 'Swap Linear Algebra',
+          createdAt: Date.now() - 6000000
+        }
+      ]
+    }
+  },
+
+  // 3. Lost & Found Pins (📝)
+  {
+    id: 'pin-lf-hydroflask',
+    type: 'lostfound',
+    lat: 23.1748,
+    lng: 80.0335,
+    title: 'Lost: Blue Hydro Flask with Anime Stickers',
+    createdBy: { name: 'Sleepy Fox', avatar: '🦊', color: '#ef4444' },
+    createdAt: Date.now() - 7200000,
+    lostFoundData: {
+      category: 'lost',
+      description: 'Left near the basketball bleachers around 5:30 PM yesterday. Has a distinctive Cyberpunk sticker on the base.',
+      photoUrl: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&auto=format&fit=crop&q=80',
+      dateHappened: 'Yesterday afternoon',
+      comments: [
+        {
+          id: 'c-1',
+          author: { name: 'Court Runner', avatar: '🏃', color: '#10b981' },
+          text: 'I think I saw someone move a blue bottle to the bench near court 2 around 7 PM!',
+          createdAt: Date.now() - 5000000
+        },
+        {
+          id: 'c-2',
+          author: { name: 'Sleepy Fox', avatar: '🦊', color: '#ef4444' },
+          text: 'Thanks so much! Walking over to check right now 🙏',
+          createdAt: Date.now() - 3000000
+        }
+      ]
+    }
+  },
+  {
+    id: 'pin-lf-keyring',
+    type: 'lostfound',
+    lat: 23.1752,
+    lng: 80.0298,
+    title: 'Found: Silver Keyring with 3 Keys & Car Fob',
+    createdBy: { name: 'Morning Bird', avatar: '🐦', color: '#3b82f6' },
+    createdAt: Date.now() - 14400000,
+    lostFoundData: {
+      category: 'found',
+      description: 'Found lying on the counter at Nescafe Kiosk this morning around 9:00 AM.',
+      photoUrl: 'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=400&auto=format&fit=crop&q=80',
+      dateHappened: 'This morning, 9:00 AM',
+      comments: [
+        {
+          id: 'c-3',
+          author: { name: 'Morning Bird', avatar: '🐦', color: '#3b82f6' },
+          text: 'Handed it over to the cafe counter manager for safekeeping! Just ask for the silver ring.',
+          createdAt: Date.now() - 14000000
+        }
+      ]
+    }
+  }
+];
+
+defaultPins.forEach(p => pins.set(p.id, p));
+
+app.get('/api/pins', (req, res) => {
+  res.json(Array.from(pins.values()));
 });
 
 // ==========================================
@@ -693,12 +943,230 @@ io.on('connection', (socket) => {
   let currentUser = null;
 
   socket.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+  socket.emit('pins_update', Array.from(pins.values()));
+
+  // Pins Event Handlers
+  socket.on('get_pins', () => {
+    socket.emit('pins_update', Array.from(pins.values()));
+  });
+
+  socket.on('create_pin', (pinData, callback) => {
+    if (!pinData || !pinData.type || !pinData.title) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Invalid pin payload' });
+      return;
+    }
+
+    const pinId = `pin-${pinData.type}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    let linkedRoomId = pinData.roomId;
+
+    // If type is room or marketplace, ensure linked room exists or create one
+    if (pinData.type === 'room' && !linkedRoomId) {
+      const roomCode = (pinData.code || Math.random().toString(36).substring(2, 8)).toUpperCase();
+      linkedRoomId = `lounge-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const newRoom = {
+        id: linkedRoomId,
+        code: roomCode,
+        name: pinData.title,
+        category: pinData.category || 'General',
+        selectedGame: pinData.selectedGame || 'scribble',
+        description: pinData.description || 'A cozy pin lounge on campus.',
+        tags: pinData.tags || ['MapPin'],
+        created: Date.now(),
+        isPermanent: false,
+        users: new Map(),
+        canvasStrokes: [],
+        messages: [],
+        game: {
+          type: pinData.selectedGame || 'scribble',
+          isActive: false,
+          scores: {},
+          timerInterval: null,
+          timeLeft: 30,
+          currentDrawer: null,
+          currentWord: '',
+          revealedWord: '',
+          hasGuessed: new Set(),
+          triviaQuestion: null,
+          triviaAnswers: new Map(),
+          currentLetter: 'C',
+          lastWord: 'Campus',
+          wordHistory: ['Campus'],
+          streakCount: 1,
+          currentPrompt: null,
+          emojiTargets: []
+        }
+      };
+      rooms.set(linkedRoomId, newRoom);
+    } else if (pinData.type === 'marketplace' && !linkedRoomId) {
+      const roomCode = ('MKT' + Math.random().toString(36).substring(2, 5)).toUpperCase();
+      linkedRoomId = `room-mkt-${Date.now()}`;
+      const priceStr = pinData.marketData?.price ? String(pinData.marketData.price) : '$0';
+      const mktType = pinData.marketData?.listingType || 'sell';
+      const newRoom = {
+        id: linkedRoomId,
+        code: roomCode,
+        name: `🏷️ ${pinData.title} (${priceStr})`,
+        category: 'General',
+        selectedGame: 'scribble',
+        description: `Negotiation chat for "${pinData.title}" (${priceStr}).`,
+        tags: ['Marketplace', mktType.toUpperCase()],
+        created: Date.now(),
+        isPermanent: false,
+        users: new Map(),
+        canvasStrokes: [],
+        messages: [
+          {
+            id: `sys-mkt-${Date.now()}`,
+            sender: { name: '🏷️ Campus Market', color: '#10b981', avatar: '🏷️' },
+            text: `Listing created for "${pinData.title}" at ${priceStr}. Discuss pickup details here!`,
+            timestamp: Date.now(),
+            isSystem: true
+          }
+        ],
+        game: {
+          type: 'scribble',
+          isActive: false,
+          scores: {},
+          timerInterval: null,
+          timeLeft: 30,
+          currentDrawer: null,
+          currentWord: '',
+          revealedWord: '',
+          hasGuessed: new Set(),
+          triviaQuestion: null,
+          triviaAnswers: new Map(),
+          currentLetter: 'C',
+          lastWord: 'Campus',
+          wordHistory: ['Campus'],
+          streakCount: 1,
+          currentPrompt: null,
+          emojiTargets: []
+        }
+      };
+      rooms.set(linkedRoomId, newRoom);
+    }
+
+    const newPin = {
+      id: pinId,
+      type: pinData.type,
+      lat: Number(pinData.lat) || 23.1750,
+      lng: Number(pinData.lng) || 80.0292,
+      title: pinData.title,
+      createdBy: pinData.createdBy || { name: 'Anonymous Student', avatar: '🎓', color: '#8b5cf6' },
+      createdAt: Date.now(),
+      roomId: linkedRoomId,
+      category: pinData.category,
+      selectedGame: pinData.selectedGame,
+      description: pinData.description,
+      tags: pinData.tags,
+      marketData: pinData.marketData ? {
+        ...pinData.marketData,
+        comments: []
+      } : (pinData.type === 'marketplace' ? { price: '$0', listingType: 'sell', comments: [] } : undefined),
+      lostFoundData: pinData.lostFoundData ? {
+        category: pinData.lostFoundData.category || 'lost',
+        description: pinData.lostFoundData.description || '',
+        photoUrl: pinData.lostFoundData.photoUrl || '',
+        dateHappened: pinData.lostFoundData.dateHappened || 'Recently',
+        comments: []
+      } : (pinData.type === 'lostfound' ? {
+        category: 'lost',
+        description: pinData.description || '',
+        photoUrl: pinData.photoUrl || '',
+        dateHappened: 'Recently',
+        comments: []
+      } : undefined)
+    };
+
+    pins.set(pinId, newPin);
+
+    io.emit('pins_update', Array.from(pins.values()));
+    io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+
+    if (typeof callback === 'function') {
+      callback({ success: true, pin: newPin, roomId: linkedRoomId });
+    }
+  });
+
+  socket.on('update_pin', ({ pinId, updates }, callback) => {
+    const pin = pins.get(pinId);
+    if (!pin) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Pin not found' });
+      return;
+    }
+
+    if (updates.title) pin.title = updates.title;
+    if (typeof updates.lat === 'number') pin.lat = updates.lat;
+    if (typeof updates.lng === 'number') pin.lng = updates.lng;
+    if (updates.description) pin.description = updates.description;
+    if (updates.marketData) pin.marketData = { ...pin.marketData, ...updates.marketData };
+
+    pins.set(pinId, pin);
+    io.emit('pins_update', Array.from(pins.values()));
+
+    if (typeof callback === 'function') {
+      callback({ success: true, pin });
+    }
+  });
+
+  socket.on('add_lostfound_comment', ({ pinId, comment }, callback) => {
+    const pin = pins.get(pinId);
+    if (!pin || pin.type !== 'lostfound' || !pin.lostFoundData) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Lost & Found pin not found' });
+      return;
+    }
+
+    const newComment = {
+      id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      author: comment?.author || { name: 'Anonymous Student', avatar: '🐱', color: '#10b981' },
+      text: comment?.text || '',
+      createdAt: Date.now()
+    };
+
+    pin.lostFoundData.comments = pin.lostFoundData.comments || [];
+    pin.lostFoundData.comments.push(newComment);
+    pins.set(pinId, pin);
+
+    io.emit('pins_update', Array.from(pins.values()));
+
+    if (typeof callback === 'function') {
+      callback({ success: true, comment: newComment });
+    }
+  });
+
+  socket.on('add_trade_comment', ({ pinId, comment }, callback) => {
+    const pin = pins.get(pinId);
+    if (!pin || pin.type !== 'marketplace') {
+      if (typeof callback === 'function') callback({ success: false, error: 'Marketplace pin not found' });
+      return;
+    }
+
+    pin.marketData = pin.marketData || {};
+    pin.marketData.comments = pin.marketData.comments || [];
+
+    const newComment = {
+      id: `tc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      author: comment?.author || { name: 'Anonymous Student', avatar: '🏷️', color: '#10b981' },
+      text: comment?.text || '',
+      offer: comment?.offer || null,
+      createdAt: Date.now()
+    };
+
+    pin.marketData.comments.push(newComment);
+    pins.set(pinId, pin);
+
+    io.emit('pins_update', Array.from(pins.values()));
+
+    if (typeof callback === 'function') {
+      callback({ success: true, comment: newComment });
+    }
+  });
 
   // Create Room
   socket.on('create_room', (roomData, callback) => {
+    const roomCode = (roomData?.code || Math.random().toString(36).substring(2, 8)).toUpperCase();
     const roomId = `lounge-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const selectedGame = roomData.selectedGame || 'scribble';
-    const roomCode = (roomData.code || roomId.replace('lounge-', '').slice(0, 6)).toUpperCase();
+    const selectedGame = roomData?.selectedGame || 'scribble';
 
     const newRoom = {
       id: roomId,
@@ -743,61 +1211,20 @@ io.on('connection', (socket) => {
   });
 
   // Join Room by Code
-  socket.on('join_room_by_code', (data, callback) => {
-    const rawCode = (typeof data === 'string' ? data : (data?.code || '')).trim().replace(/^#/, '').toUpperCase();
-    if (!rawCode) {
-      if (typeof callback === 'function') callback({ success: false, error: 'Invalid room code' });
-      return;
-    }
-
-    let targetRoom = Array.from(rooms.values()).find(r => 
-      (r.code && r.code.toUpperCase() === rawCode) ||
-      r.id.toUpperCase() === rawCode ||
-      r.id.toUpperCase() === `LOUNGE-${rawCode}`
+  socket.on('join_room_by_code', ({ code }, callback) => {
+    const searchCode = (code || '').trim().toUpperCase();
+    const targetRoom = Array.from(rooms.values()).find(
+      r => r.code && r.code.toUpperCase() === searchCode
     );
 
-    if (!targetRoom) {
-      // Create ephemeral room for custom code so multiple peers enter the same room
-      const newRoomId = `lounge-${rawCode.toLowerCase()}`;
-      targetRoom = {
-        id: newRoomId,
-        code: rawCode,
-        name: `Private Lounge #${rawCode}`,
-        category: 'General',
-        selectedGame: 'scribble',
-        description: `Private room joined with code #${rawCode}`,
-        tags: ['Private', 'Code-Room'],
-        created: Date.now(),
-        isPermanent: false,
-        users: new Map(),
-        canvasStrokes: [],
-        messages: [],
-        game: {
-          type: 'scribble',
-          isActive: false,
-          scores: {},
-          timerInterval: null,
-          timeLeft: 30,
-          currentDrawer: null,
-          currentWord: '',
-          revealedWord: '',
-          hasGuessed: new Set(),
-          triviaQuestion: null,
-          triviaAnswers: new Map(),
-          currentLetter: 'C',
-          lastWord: 'Campus',
-          wordHistory: ['Campus'],
-          streakCount: 1,
-          currentPrompt: null,
-          emojiTargets: []
-        }
-      };
-      rooms.set(newRoomId, targetRoom);
-      io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
-    }
-
-    if (typeof callback === 'function') {
-      callback({ success: true, roomId: targetRoom.id });
+    if (targetRoom) {
+      if (typeof callback === 'function') {
+        callback({ success: true, roomId: targetRoom.id });
+      }
+    } else {
+      if (typeof callback === 'function') {
+        callback({ success: false });
+      }
     }
   });
 
@@ -835,7 +1262,6 @@ io.on('connection', (socket) => {
     socket.emit('room_joined_data', {
       room: {
         id: room.id,
-        code: room.code || (room.id.startsWith('lounge-') ? room.id.replace('lounge-', '').slice(0, 6).toUpperCase() : room.id.slice(0, 6).toUpperCase()),
         name: room.name,
         category: room.category,
         selectedGame: room.game.type,
@@ -1103,11 +1529,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', handleLeave);
 });
 
-app.use(express.static(path.join(__dirname, '../client/dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
-});
-
-httpServer.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, () => {
   console.log(`🌌 Soulnook Decompression Lounge server live on port ${PORT}`);
 });

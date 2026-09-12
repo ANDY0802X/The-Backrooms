@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { io } from 'socket.io-client';
+import io from 'socket.io-client';
 import Landing from './components/Landing';
 import Lobby from './components/Lobby';
 import RoomView from './components/RoomView';
 import { generateAnonymousIdentity } from './utils/identity';
 import { sounds } from './utils/sound';
-
-const SERVER_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
-const socket = io(SERVER_URL);
 
 const VIEW_ORDER = {
   landing: 0,
@@ -47,7 +44,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'lobby' | 'room'
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('soulnook_theme') || 'dark';
+    return localStorage.getItem('soulnook_theme') || 'light';
   });
 
   const [userProfile, setUserProfile] = useState(() => {
@@ -62,6 +59,12 @@ export default function App() {
 
   const [currentRoomId, setCurrentRoomId] = useState(null);
   const [rooms, setRooms] = useState([]);
+  const [pins, setPins] = useState([]);
+  const socketRef = useRef(null);
+
+  if (!socketRef.current) {
+    socketRef.current = io(import.meta.env.VITE_SERVER_URL || 'http://localhost:3001');
+  }
 
   // Sync theme with HTML root attribute
   useEffect(() => {
@@ -78,18 +81,26 @@ export default function App() {
     sessionStorage.setItem('soulnook_user', JSON.stringify(userProfile));
   }, [userProfile]);
 
-  // Connect to Socket.io & Listen for Rooms
+  // Connect to Socket.io & Listen for Rooms and Pins
   useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
     const handleRoomsUpdate = (updatedRooms) => {
-      if (Array.isArray(updatedRooms)) {
-        setRooms(updatedRooms);
-      }
+      setRooms(updatedRooms);
+    };
+
+    const handlePinsUpdate = (updatedPins) => {
+      setPins(updatedPins);
     };
 
     socket.on('rooms_update', handleRoomsUpdate);
+    socket.on('pins_update', handlePinsUpdate);
+    socket.emit('get_pins');
 
     return () => {
       socket.off('rooms_update', handleRoomsUpdate);
+      socket.off('pins_update', handlePinsUpdate);
     };
   }, []);
 
@@ -112,20 +123,47 @@ export default function App() {
   };
 
   const handleJoinRoomByCode = (code) => {
-    if (!code) return;
-    socket.emit('join_room_by_code', { code, user: userProfile }, (res) => {
-      if (res && res.success && res.roomId) {
-        handleJoinRoom(res.roomId);
+    if (!code || !socketRef.current) return;
+    socketRef.current.emit('join_room_by_code', { code, user: userProfile }, ({ success, roomId }) => {
+      if (success && roomId) {
+        handleJoinRoom(roomId);
       }
     });
   };
 
   const handleCreateRoom = (roomData) => {
-    socket.emit('create_room', roomData, (res) => {
-      if (res && res.success && res.roomId) {
-        handleJoinRoom(res.roomId);
+    if (!socketRef.current) return;
+    socketRef.current.emit('create_room', roomData, ({ success, roomId }) => {
+      if (success && roomId) {
+        handleJoinRoom(roomId);
       }
     });
+  };
+
+  const handleCreatePin = (pinData) => {
+    if (!socketRef.current) return;
+    socketRef.current.emit('create_pin', pinData, ({ success, pin, roomId }) => {
+      if (success) {
+        if ((pin.type === 'room' || pin.type === 'marketplace') && roomId) {
+          handleJoinRoom(roomId);
+        }
+      }
+    });
+  };
+
+  const handleUpdatePin = (pinId, updates) => {
+    if (!socketRef.current) return;
+    socketRef.current.emit('update_pin', { pinId, updates });
+  };
+
+  const handleAddLostFoundComment = (pinId, comment) => {
+    if (!socketRef.current) return;
+    socketRef.current.emit('add_lostfound_comment', { pinId, comment });
+  };
+
+  const handleAddTradeComment = (pinId, comment) => {
+    if (!socketRef.current) return;
+    socketRef.current.emit('add_trade_comment', { pinId, comment });
   };
 
   const handleLeaveRoom = () => {
@@ -163,14 +201,18 @@ export default function App() {
 
           {currentView === 'lobby' && (
             <Lobby
-              socket={socket}
               rooms={rooms}
+              pins={pins}
               userProfile={userProfile}
               onUpdateUserProfile={setUserProfile}
               onRerollProfile={handleRerollProfile}
               onJoinRoom={handleJoinRoom}
               onJoinRoomByCode={handleJoinRoomByCode}
               onCreateRoom={handleCreateRoom}
+              onCreatePin={handleCreatePin}
+              onUpdatePin={handleUpdatePin}
+              onAddLostFoundComment={handleAddLostFoundComment}
+              onAddTradeComment={handleAddTradeComment}
               onBackToLanding={() => changeView('landing')}
               theme={theme}
               onToggleTheme={toggleTheme}
@@ -179,7 +221,7 @@ export default function App() {
 
           {currentView === 'room' && currentRoomId && (
             <RoomView
-              socket={socket}
+              socket={socketRef.current}
               roomId={currentRoomId}
               userProfile={userProfile}
               onLeaveRoom={handleLeaveRoom}
