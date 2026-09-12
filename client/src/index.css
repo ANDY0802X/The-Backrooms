@@ -43,8 +43,8 @@
   --accent-rose: #ff3b3b;
   --accent-sky: #38bdf8;
 
-  /* High-Contrast WCAG AA Typography (Bone white body, pure red for accents only) */
-  --text-primary: #f5f5f7;
+  /* High-Contrast WCAG AA Typography (Warm off-white body reduces eye strain vs pure white) */
+  --text-primary: #ede7e9;
   --text-secondary: #b5a9ab;
   --text-muted: #7d7274;
   --doodle-color: rgba(255, 59, 59, 0.14);
@@ -70,6 +70,11 @@
   /* Physics & Transitions */
   --ease-sqs: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-bounce: 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Presence Activity Glow Tokens */
+  --presence-calm-glow: rgba(255, 59, 59, 0.18);
+  --presence-active-glow: rgba(255, 59, 59, 0.75);
 }
 
 /* ----------------------------------------------------
@@ -305,6 +310,10 @@ button {
   transition: all 0.24s var(--ease-sqs);
 }
 
+button:active {
+  transform: scale(0.96) translateY(1px);
+}
+
 .btn-pill-primary {
   background: var(--accent-gradient);
   color: #ffffff;
@@ -416,48 +425,58 @@ button {
   animation: messageVaporize 12s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+/* Ember-glow burn bar — thin line that intensifies as the message nears death */
 .ephemeral-burn-bar {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 2.5px;
-  background: var(--accent-burn);
-  box-shadow: 0 0 8px var(--accent-glow);
+  height: 2px;
+  background: linear-gradient(90deg, #ff3b3b 0%, #ff7a00 55%, #b00020 100%);
+  border-radius: 2px;
   width: 100%;
-  animation: burnDownBar 12s linear forwards;
+  animation: emberBurnDown 12s linear forwards;
+  transform-origin: left center;
 }
 
-@keyframes burnDownBar {
-  0% { width: 100%; opacity: 1; }
-  85% { width: 15%; opacity: 0.9; }
-  100% { width: 0%; opacity: 0; }
+@keyframes emberBurnDown {
+  0%   { width: 100%; box-shadow: 0 0 4px 1px rgba(255,59,59,0.35); opacity: 1; }
+  70%  { width: 30%;  box-shadow: 0 0 6px 2px rgba(255,100,0,0.5);  opacity: 1; }
+  85%  { width: 15%;  box-shadow: 0 0 10px 3px rgba(255,59,59,0.7); opacity: 1; }
+  92%  { width: 8%;   box-shadow: 0 0 14px 5px rgba(255,59,59,0.9); opacity: 1; }
+  100% { width: 0%;   box-shadow: 0 0 18px 6px rgba(255,59,59,1.0); opacity: 0; }
 }
 
+/* Refined vaporize with smoother easing on the final blur-out */
 @keyframes messageVaporize {
   0% {
     opacity: 1;
     transform: scale(1);
     filter: blur(0px);
   }
-  82% {
+  80% {
     opacity: 1;
     transform: scale(1);
     filter: blur(0px);
   }
-  92% {
-    opacity: 0.7;
-    transform: scale(0.98) translateY(-2px);
-    filter: blur(1.5px);
+  88% {
+    opacity: 0.85;
+    transform: scale(0.99) translateY(-1px);
+    filter: blur(0.6px);
+  }
+  94% {
+    opacity: 0.5;
+    transform: scale(0.97) translateY(-4px);
+    filter: blur(2.5px);
   }
   97% {
-    opacity: 0.3;
-    transform: scale(0.94) translateY(-6px);
-    filter: blur(4px);
+    opacity: 0.2;
+    transform: scale(0.93) translateY(-9px);
+    filter: blur(5px);
   }
   100% {
     opacity: 0;
-    transform: scale(0.9) translateY(-12px);
-    filter: blur(8px);
+    transform: scale(0.88) translateY(-14px);
+    filter: blur(9px);
     max-height: 0;
     padding-top: 0;
     padding-bottom: 0;

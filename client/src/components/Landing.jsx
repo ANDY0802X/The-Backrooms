@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Landing.css';
 import { sounds } from '../utils/sound';
@@ -17,6 +17,14 @@ export default function Landing({
 }) {
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [inputCode, setInputCode] = useState('');
+  // One-shot intro tagline — only animates on first visit per session
+  const [showTagline] = useState(() => {
+    if (typeof sessionStorage !== 'undefined') {
+      if (sessionStorage.getItem('tbr-intro-shown')) return false;
+      sessionStorage.setItem('tbr-intro-shown', '1');
+    }
+    return true;
+  });
 
   const displayName = userProfile?.name !== undefined ? userProfile.name : '';
   const currentAvatar = userProfile?.avatar || '😴';
@@ -48,7 +56,7 @@ export default function Landing({
   };
 
   const handleEnter = () => {
-    sounds.playChime();
+    sounds.playJoinChime();
     if (!userProfile?.name?.trim()) {
       const generated = generateAnonymousIdentity();
       if (typeof onUpdateUserProfile === 'function') {
@@ -169,9 +177,25 @@ export default function Landing({
         {/* Subtitle */}
         <Reveal index={2}>
           <p className="backrooms-hero-sub">
-            Zero logins. Zero records. Instant anonymous venting & doodle lounges.
+            Zero logins. Zero records. Instant anonymous venting &amp; doodle lounges.
           </p>
         </Reveal>
+
+        {/* One-shot animated privacy tagline */}
+        <AnimatePresence>
+          {showTagline && (
+            <motion.div
+              className="landing-tagline-badge"
+              initial={{ opacity: 0, y: 10, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="tagline-icon">🔥</span>
+              <span>No login&nbsp;·&nbsp;No logs&nbsp;·&nbsp;Every word vanishes in 12 s</span>
+              <span className="tagline-icon">🔒</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Centered Neumorphic Card */}
         <Reveal index={3}>
