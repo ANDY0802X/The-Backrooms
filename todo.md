@@ -204,7 +204,7 @@ For each game:
 
 These are intentionally NOT part of the current implementation.
 
-* [ ] QR-based physical verification.
+* [x] ~~QR-based physical verification~~ (Removed by user decision; relying on zero-knowledge GPS & room codes).
 * [ ] Bluetooth/local-network proximity verification.
 * [ ] NFC-based room joining.
 * [ ] More multiplayer mini-games.
