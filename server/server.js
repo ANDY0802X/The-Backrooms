@@ -254,8 +254,15 @@ function formatRoomForLobby(room) {
     tags: room.tags || [],
     userCount: room.users ? room.users.size : 0,
     created: room.created,
-    isGameActive: room.game?.isActive || false
+    isGameActive: room.game?.isActive || false,
+    isPrivate: Boolean(room.isPrivate)
   };
+}
+
+function getPublicRoomsForLobby() {
+  return Array.from(rooms.values())
+    .filter(r => !r.isPrivate)
+    .map(formatRoomForLobby);
 }
 
 // REST Endpoints
@@ -264,7 +271,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/rooms', (req, res) => {
-  res.json(Array.from(rooms.values()).map(formatRoomForLobby));
+  res.json(getPublicRoomsForLobby());
 });
 
 // ==========================================
@@ -1005,7 +1012,7 @@ io.on('connection', (socket) => {
   let currentRoomId = null;
   let currentUser = null;
 
-  socket.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+  socket.emit('rooms_update', getPublicRoomsForLobby());
   socket.emit('pins_update', Array.from(pins.values()));
 
   // Pins Event Handlers
@@ -1144,7 +1151,7 @@ io.on('connection', (socket) => {
     pins.set(pinId, newPin);
 
     io.emit('pins_update', Array.from(pins.values()));
-    io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+    io.emit('rooms_update', getPublicRoomsForLobby());
 
     if (typeof callback === 'function') {
       callback({ success: true, pin: newPin, roomId: linkedRoomId });
@@ -1227,6 +1234,7 @@ io.on('connection', (socket) => {
 
   // Create Room
   socket.on('create_room', (roomData, callback) => {
+    const isPrivate = Boolean(roomData?.isPrivate);
     const roomCode = (roomData?.code || Math.random().toString(36).substring(2, 8)).toUpperCase();
     const roomId = `lounge-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const selectedGame = roomData?.selectedGame || 'scribble';
@@ -1234,13 +1242,14 @@ io.on('connection', (socket) => {
     const newRoom = {
       id: roomId,
       code: roomCode,
-      name: roomData.name || 'Cozy Anonymous Corner ☕',
+      name: roomData.name || (isPrivate ? 'Private Sanctuary 🔒' : 'Cozy Anonymous Corner ☕'),
       category: roomData.category || 'General',
       selectedGame,
-      description: roomData.description || 'A cozy space to vent and recharge.',
-      tags: roomData.tags || ['Ephemeral', 'Vent'],
+      description: roomData.description || (isPrivate ? 'A private lounge for code holders.' : 'A cozy space to vent and recharge.'),
+      tags: roomData.tags || ['Ephemeral', isPrivate ? 'Private' : 'Vent'],
       created: Date.now(),
       isPermanent: false,
+      isPrivate,
       users: new Map(),
       canvasStrokes: [],
       messages: [],
@@ -1266,7 +1275,10 @@ io.on('connection', (socket) => {
     };
 
     rooms.set(roomId, newRoom);
-    io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+    socket.authorizedRooms = socket.authorizedRooms || new Set();
+    socket.authorizedRooms.add(roomId);
+
+    io.emit('rooms_update', getPublicRoomsForLobby());
 
     if (typeof callback === 'function') {
       callback({ success: true, roomId, code: roomCode });
@@ -1281,6 +1293,8 @@ io.on('connection', (socket) => {
     );
 
     if (targetRoom) {
+      socket.authorizedRooms = socket.authorizedRooms || new Set();
+      socket.authorizedRooms.add(targetRoom.id);
       if (typeof callback === 'function') {
         callback({ success: true, roomId: targetRoom.id });
       }
@@ -1297,6 +1311,14 @@ io.on('connection', (socket) => {
     if (!room) {
       socket.emit('error_message', 'Room does not exist or has expired.');
       return;
+    }
+
+    if (room.isPrivate) {
+      const isAuthorized = socket.authorizedRooms && socket.authorizedRooms.has(roomId);
+      if (!isAuthorized) {
+        socket.emit('error_message', 'This lounge is private. Please enter the room code to join.');
+        return;
+      }
     }
 
     if (currentRoomId && currentRoomId !== roomId) {
@@ -1370,7 +1392,7 @@ io.on('connection', (socket) => {
     room.messages.push(welcomeMsg);
     io.to(roomId).emit('new_message', welcomeMsg);
 
-    io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+    io.emit('rooms_update', getPublicRoomsForLobby());
   });
 
   // Canvas
@@ -1830,13 +1852,13 @@ io.on('connection', (socket) => {
             const checkRoom = rooms.get(currentRoomId);
             if (checkRoom && checkRoom.users.size === 0 && !checkRoom.isPermanent) {
               rooms.delete(currentRoomId);
-              io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+              io.emit('rooms_update', getPublicRoomsForLobby());
             }
           }, 60000);
         }
       }
 
-      io.emit('rooms_update', Array.from(rooms.values()).map(formatRoomForLobby));
+      io.emit('rooms_update', getPublicRoomsForLobby());
       currentRoomId = null;
     }
   };

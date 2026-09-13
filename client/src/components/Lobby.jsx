@@ -40,7 +40,7 @@ export default function Lobby({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [copiedCode, setCopiedCode] = useState(null);
+  const [roomPrivacy, setRoomPrivacy] = useState('public'); // 'public' | 'private'
   const { audioLabel, cycleVolume } = useSoundVolume();
 
   // Pin placement & creation state
@@ -82,6 +82,7 @@ export default function Lobby({
   const [lfPhotoUrl, setLfPhotoUrl] = useState('');
 
   const filteredRooms = rooms.filter(room => {
+    if (room.isPrivate) return false;
     return selectedCategory === 'All' || room.category === selectedCategory;
   });
 
@@ -116,16 +117,18 @@ export default function Lobby({
     }
 
     if (activePinTab === 'room') {
+      const isPrivate = roomPrivacy === 'private';
       const roomPayload = {
         name: newRoomName.trim(),
         code: newRoomCode.trim().toUpperCase() || undefined,
         category: newRoomCategory,
         selectedGame: newRoomGame,
-        description: newRoomDesc.trim() || 'A chill space to decompress.',
-        tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean)
+        description: newRoomDesc.trim() || (isPrivate ? 'A private lounge for code holders.' : 'A chill space to decompress.'),
+        tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean),
+        isPrivate
       };
 
-      if (viewMode === 'list') {
+      if (isPrivate || viewMode === 'list') {
         if (typeof onCreateRoom === 'function') {
           onCreateRoom(roomPayload);
         }
@@ -142,7 +145,8 @@ export default function Lobby({
             category: newRoomCategory,
             selectedGame: newRoomGame,
             tags: newRoomTags.split(',').map(t => t.trim()).filter(Boolean),
-            createdBy: userProfile
+            createdBy: userProfile,
+            isPrivate: false
           });
         }
       }
@@ -190,6 +194,7 @@ export default function Lobby({
     setNewRoomCode('');
     setNewRoomDesc('');
     setNewRoomTags('');
+    setRoomPrivacy('public');
   };
 
   const handleCodeSubmit = (e) => {
@@ -199,15 +204,6 @@ export default function Lobby({
     if (typeof onJoinRoomByCode === 'function') {
       onJoinRoomByCode(joinCodeInput.trim().toUpperCase());
     }
-  };
-
-  const handleCopyCode = (code) => {
-    try {
-      navigator.clipboard.writeText(code);
-      sounds.playPop();
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
-    } catch (e) {}
   };
 
   const getGameLabel = (gameType) => {
@@ -443,24 +439,7 @@ export default function Lobby({
                     </div>
                   </div>
 
-                  <div className="room-code-badge-row">
-                    <span className="room-code-display">Code: {roomCode}</span>
-                    <motion.button
-                      whileHover={{ scale: 1.08 }}
-                      whileTap={{ scale: 0.92 }}
-                      type="button"
-                      className="room-code-copy-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopyCode(roomCode);
-                      }}
-                      title="Copy room code"
-                    >
-                      {copiedCode === roomCode ? '✓ Copied' : '📋 Copy'}
-                    </motion.button>
-                  </div>
-
-                  <div>
+                  <div style={{ marginTop: '8px' }}>
                     <h3 className="room-card-title">{room.name}</h3>
                     <p className="room-card-desc">{room.description}</p>
                   </div>
@@ -587,7 +566,48 @@ export default function Lobby({
                 {activePinTab === 'room' && (
                   <>
                     <div className="modal-form-group">
-                      <label className="modal-label">Custom Room Code (Optional)</label>
+                      <label className="modal-label">Room Access & Privacy</label>
+                      <div className="privacy-radio-group">
+                        <label className={`privacy-radio-card ${roomPrivacy === 'public' ? 'active' : ''}`}>
+                          <input
+                            type="radio"
+                            name="roomPrivacy"
+                            value="public"
+                            checked={roomPrivacy === 'public'}
+                            onChange={() => setRoomPrivacy('public')}
+                            className="privacy-radio-input"
+                          />
+                          <div className="privacy-radio-body">
+                            <div className="privacy-radio-title-row">
+                              <span className="privacy-radio-title">🌐 Public Lounge</span>
+                              <span className="privacy-radio-tag public">Visible to all</span>
+                            </div>
+                            <span className="privacy-radio-sub">Listed in the campus lounge directory and map. Any peer can step inside.</span>
+                          </div>
+                        </label>
+
+                        <label className={`privacy-radio-card ${roomPrivacy === 'private' ? 'active' : ''}`}>
+                          <input
+                            type="radio"
+                            name="roomPrivacy"
+                            value="private"
+                            checked={roomPrivacy === 'private'}
+                            onChange={() => setRoomPrivacy('private')}
+                            className="privacy-radio-input"
+                          />
+                          <div className="privacy-radio-body">
+                            <div className="privacy-radio-title-row">
+                              <span className="privacy-radio-title">🔒 Private Lounge</span>
+                              <span className="privacy-radio-tag private">Code Required</span>
+                            </div>
+                            <span className="privacy-radio-sub">Hidden from public lists and map. Only peers who enter the room code can enter.</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="modal-form-group">
+                      <label className="modal-label">Custom Room Code {roomPrivacy === 'private' ? '(Required for Peers to Enter)' : '(Optional)'}</label>
                       <input
                         type="text"
                         className="modal-input"
@@ -597,7 +617,9 @@ export default function Lobby({
                         maxLength={10}
                       />
                       <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        Friends can enter this code to join your room immediately.
+                        {roomPrivacy === 'private'
+                          ? 'Only peers who enter this code can enter this private room.'
+                          : 'Friends can enter this code in the header to join your room immediately.'}
                       </span>
                     </div>
 

@@ -10,7 +10,14 @@ Full-stack real-time web application built for Track 2 (Campus Problem Solver) w
   - Filtered OpenStreetMap GeoJSON polygon features with zero unwanted blue Point markers.
   - Sleek capsule markers for Lounges, Campus Marketplace, and Lost & Found.
   - "DROP PIN" mode with live banner, crosshair cursor across all layers, and instant coordinate selection.
-- **Room Code System**: Shareable codes with direct "Join with Code" and 1-click clipboard copy.
+- **Room Code & Private Lounge Architecture**:
+  - Public lounge cards cleanly display only room info and direct entry (copy code button stripped from public listing).
+  - Inside room view retains the `Code: #XXXXXX 📋` badge for easy 1-click sharing.
+  - Radio button group during creation allows choosing between 🌐 Public and 🔒 Private Lounges.
+  - Private lounges are completely hidden from public listings and campus map pins; only users entering the valid room code are admitted.
+- **Dark Mode Mini-Games Glow Cleanup**:
+  - Stripped glowing neon text shadows, saturated box-shadow halos, and neon borders across all 5 mini-games in dark mode.
+  - Word Chain, Trivia Blitz, Canvas & Scribble, Emoji Pop, and Truth/Vent use minimalist monochrome editorial surfaces.
 - **Live Room Polls**: Real-time multi-choice polling with instant socket sync (`create_poll`, `vote_poll`, `close_poll`), animated percentage bars, voter deduplication/switching, and conclusion controls.
 - **Lost & Found & Marketplace Drawers**: High z-index (99999) modals with instant comment threads and sighting replies.
 - **5 Pop-Up Multiplayer Mini-Games**:
@@ -19,12 +26,12 @@ Full-stack real-time web application built for Track 2 (Campus Problem Solver) w
   3. *Rapid Word Chain* (Letter chain association with combo streaks).
   4. *Emoji Pop Reflex* (Fast arcade reaction popping targets).
   5. *Truth, Vent & Dare* (Campus confessionals & cathartic prompts).
-- **Synchronized Canvas**: Full-screen high-DPI collaborative pad with stroke sync, neon palette, stroke slider, eraser, and PNG export.
+- **Synchronized Canvas**: Full-screen high-DPI collaborative pad with stroke sync, palette, stroke slider, eraser, and PNG export.
 - **Animated 12s Dissolving Messages**: Ephemeral vents with burning progress bar and vaporizing blur disintegration animation.
 - **Zero-Trace Ephemeral Privacy**: In-memory state; zero persistent chat/canvas logs.
 
 ## Broken
-- None. Production build passes in 3.27s. Local servers running live on http://localhost:5173 and http://localhost:3001 with 200 OK responses.
+- None. Production build passes in 1.87s. Local servers running live on http://localhost:5173 and http://localhost:3001 with 200 OK responses.
 
 ## Next 3 things
 1. Push all latest changes to GitHub remote (`origin/main`).

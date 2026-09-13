@@ -699,6 +699,11 @@ export default function RoomView({
             <span className="badge-pill hover-lift" style={{ background: 'var(--bg-well)', color: 'var(--accent-lavender)' }}>
               {roomData.category}
             </span>
+            {roomData.isPrivate && (
+              <span className="badge-pill hover-lift room-private-pill" title="Private Lounge: Accessible only with Room Code">
+                🔒 Private
+              </span>
+            )}
           </div>
 
           {/* Room Code Badge */}
@@ -1124,7 +1129,7 @@ export default function RoomView({
                 >
                   <div className="trivia-deck unified-game-frame">
                     <div className="unified-game-header">
-                      <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
+                      <span className="badge-pill game-badge-pill game-badge-trivia">
                         ⚡ CAMPUS TRIVIA BLITZ
                       </span>
                       <span className="unified-game-timer">
@@ -1191,10 +1196,10 @@ export default function RoomView({
                 >
                   <div className="wordchain-deck unified-game-frame">
                     <div className="unified-game-header">
-                      <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-sage)' }}>
+                      <span className="badge-pill game-badge-pill game-badge-wordchain">
                         🔗 RAPID WORD CHAIN
                       </span>
-                      <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
+                      <span className="badge-pill game-badge-pill game-badge-streak">
                         🔥 Streak: {gameState.streakCount}x
                       </span>
                       {gameState.isActive && (
@@ -1267,11 +1272,11 @@ export default function RoomView({
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <div className="emojipop-top-bar unified-game-header">
-                    <span className="badge-pill" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)' }}>
+                    <span className="badge-pill game-badge-pill game-badge-emojipop">
                       💥 EMOJI POP REFLEX
                     </span>
                     {gameState.scores && gameState.scores[userProfile.name] !== undefined && (
-                      <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--text-primary)' }}>
+                      <span className="badge-pill game-badge-pill game-badge-streak">
                         Score: {gameState.scores[userProfile.name]} pts
                       </span>
                     )}
@@ -1336,10 +1341,10 @@ export default function RoomView({
                 >
                   <div className="truthvent-deck unified-game-frame">
                     <div className="unified-game-header">
-                      <span className="badge-pill" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-lavender)' }}>
+                      <span className="badge-pill game-badge-pill game-badge-truthvent">
                         🎭 TRUTH, VENT & DARE
                       </span>
-                      <span className="badge-pill" style={{ background: 'var(--bg-well)', color: 'var(--accent-amber)' }}>
+                      <span className="badge-pill game-badge-pill game-badge-prompttype">
                         {gameState.prompt?.type || 'Vent'}
                       </span>
                       <button

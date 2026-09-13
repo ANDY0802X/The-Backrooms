@@ -1730,4 +1730,139 @@
   pointer-events: none;
 }
 
+/* ===================================================
+   UNIFIED GAME BADGE PILLS
+   =================================================== */
+.game-badge-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-well);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-private-pill {
+  background: var(--bg-well);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ===================================================
+   DARK MODE: REMOVE ALL GLOWS & NEONS IN LOUNGE GAMES
+   =================================================== */
+[data-theme='dark'] .toolbar-color-btn.active {
+  box-shadow: none !important;
+  border-color: var(--text-primary) !important;
+  outline: 2px solid var(--bg-surface) !important;
+}
+
+[data-theme='dark'] .chain-letter-display {
+  color: var(--text-primary) !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+[data-theme='dark'] .wordchain-input-field:focus,
+[data-theme='dark'] .wordchain-input:focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .wordchain-last-word {
+  color: var(--text-primary) !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .chain-letter {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .game-timer-pill,
+[data-theme='dark'] .unified-game-timer,
+[data-theme='dark'] .hud-timer {
+  color: var(--text-primary) !important;
+  background: var(--bg-well) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .hud-badge {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='dark'] .hud-word {
+  color: var(--text-primary) !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .trivia-option-btn:hover:not(:disabled) {
+  border-color: var(--border-focus) !important;
+  background: var(--bg-surface-elevated) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .trivia-option-btn.selected {
+  background: var(--bg-surface-elevated) !important;
+  border-color: var(--border-focus) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .trivia-option-btn.correct {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--border-focus) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .target-points-badge {
+  background: var(--text-primary) !important;
+  color: var(--bg-core) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .truthvent-prompt-label,
+[data-theme='dark'] .truthvent-type-tag {
+  color: var(--text-muted) !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .secret-word-display {
+  color: var(--text-primary) !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .game-badge-pill,
+[data-theme='dark'] .game-badge-trivia,
+[data-theme='dark'] .game-badge-wordchain,
+[data-theme='dark'] .game-badge-streak,
+[data-theme='dark'] .game-badge-emojipop,
+[data-theme='dark'] .game-badge-truthvent,
+[data-theme='dark'] .game-badge-prompttype {
+  background: var(--bg-well) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .game-active-glow {
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+
 
