@@ -522,7 +522,7 @@
 }
 
 .trivia-option-btn.selected {
-  background: var(--accent-glow);
+  background: var(--bg-surface-elevated);
   border-color: var(--border-focus);
   color: var(--text-primary);
 }

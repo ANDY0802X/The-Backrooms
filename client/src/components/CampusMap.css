@@ -181,21 +181,21 @@
   color: #ffffff;
 }
 
-/* Dark Theme: Active Chip is Accent Void Pill */
+/* Dark Theme: Active Chip is Minimalist Pill */
 .campus-map-wrapper[data-theme='dark'] .map-chip-btn.active {
-  background: var(--accent);
-  color: #ffffff;
-  border-color: var(--accent);
-  box-shadow: 0 2px 10px var(--accent-glow);
+  background: var(--text-primary);
+  color: var(--bg-core);
+  border-color: var(--text-primary);
+  box-shadow: none;
 }
 
 .campus-map-wrapper[data-theme='dark'] .map-chip-btn.active .map-chip-dot {
-  background: #ffffff;
+  background: var(--bg-core);
 }
 
 .campus-map-wrapper[data-theme='dark'] .map-chip-btn.active .map-chip-count {
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--bg-core);
 }
 
 /* ===================================================
@@ -393,15 +393,7 @@
   height: 6px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
-  animation: pulsePingLight 2s infinite cubic-bezier(0.66, 0, 0, 1);
   flex-shrink: 0;
-}
-
-@keyframes pulsePingLight {
-  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
-  70% { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
 }
 
 /* 2. SOCIAL ROOM PIN — Dark Theme: Void Capsule */
