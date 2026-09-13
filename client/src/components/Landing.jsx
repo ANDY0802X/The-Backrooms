@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Landing.css';
 import { sounds } from '../utils/sound';
+import { useSoundVolume } from '../utils/useSound';
 import { AVATARS, generateAnonymousIdentity, cycleAvatarSeed, getDiceBearAvatarUrl, DEFAULT_AVATAR_STYLE } from '../utils/identity';
 import Reveal from './Reveal';
 
@@ -17,6 +18,7 @@ export default function Landing({
 }) {
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [inputCode, setInputCode] = useState('');
+  const { audioLabel, cycleVolume } = useSoundVolume();
   // One-shot intro tagline — only animates on first visit per session
   const [showTagline] = useState(() => {
     if (typeof sessionStorage !== 'undefined') {
@@ -89,15 +91,6 @@ export default function Landing({
     }
   };
 
-  const handleCreate = () => {
-    sounds.playSuccess();
-    if (typeof onCreateLoungeDirect === 'function') {
-      onCreateLoungeDirect();
-    } else if (typeof onEnterLounge === 'function') {
-      onEnterLounge({ openCreate: true });
-    }
-  };
-
   const handleJoinCodeSubmit = (e) => {
     e.preventDefault();
     if (!inputCode.trim()) return;
@@ -114,7 +107,6 @@ export default function Landing({
         <div className="brand-wrapper">
           <span className="brand-glyph">✦</span>
           <span className="brand-title">TheBackrooms</span>
-          <span className="brand-edition">Campus Lounge</span>
         </div>
 
         <div className="nav-actions">
@@ -134,36 +126,25 @@ export default function Landing({
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.95 }}
             className="btn-pill-secondary nav-pill"
-            onClick={() => {
-              sounds.playBoing();
-              sounds.toggleAmbient();
-            }}
-            title="Toggle Ambient Lo-Fi"
+            onClick={cycleVolume}
+            title="Adjust Audio Volume / Mute"
           >
-            ♫ Audio
+            {audioLabel}
           </motion.button>
         </div>
       </header>
 
       {/* Center Card Stage */}
       <main className="landing-stage">
-        {/* Top Tag */}
-        <Reveal index={0}>
-          <div className="backrooms-tag-pill">
-            <span className="tag-dot"></span>
-            <span>DECOMPRESSION SANCTUARY &bull; ZERO TRACE</span>
-          </div>
-        </Reveal>
-
         {/* Big Editorial Title */}
-        <Reveal index={1}>
+        <Reveal index={0}>
           <h1 className="backrooms-hero-title">
             The <em>Backrooms</em>
           </h1>
         </Reveal>
 
         {/* Subtitle */}
-        <Reveal index={2}>
+        <Reveal index={1}>
           <p className="backrooms-hero-sub">
             Anonymous real-time lounges for exhausted students.
             Doodle, vent, compete, or simply exist.
@@ -185,7 +166,7 @@ export default function Landing({
         </AnimatePresence>
 
         {/* Minimalist Card */}
-        <Reveal index={3}>
+        <Reveal index={2}>
           <div className="backrooms-card-container">
             {/* Alias Input Row */}
             <div className="backrooms-alias-box">
@@ -275,16 +256,6 @@ export default function Landing({
               <span className="arrow-glyph">→</span>
             </motion.button>
 
-            {/* Secondary Action Button */}
-            <motion.button
-              whileHover={{ scale: 1.015 }}
-              whileTap={{ scale: 0.97 }}
-              className="backrooms-btn-secondary"
-              onClick={handleCreate}
-            >
-              + Create Lounge
-            </motion.button>
-
             {/* Join by Code */}
             <div className="backrooms-code-join-row">
               <AnimatePresence mode="wait">
@@ -344,7 +315,7 @@ export default function Landing({
         </Reveal>
 
         {/* Bottom Ephemeral Assurance */}
-        <Reveal index={4}>
+        <Reveal index={3}>
           <p className="backrooms-footer-tag">
             Peer-to-peer WebRTC mesh &bull; Vanishes completely when empty
           </p>

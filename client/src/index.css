@@ -19,29 +19,29 @@
   --bg-bubble-own:       var(--text-primary-raw);
   --text-bubble-own:     #090909;
 
-  /* Neutral Borders — no crimson tint on non-interactive elements */
+  /* Neutral Borders — monochrome styling across elements */
   --border-subtle:  rgba(255, 255, 255, 0.07);
   --border-glass:   rgba(255, 255, 255, 0.10);
-  --border-glow:    rgba(229, 51, 58, 0.3);
-  --border-focus:   #e5333a;
+  --border-glow:    rgba(255, 255, 255, 0.15);
+  --border-focus:   #ede7e9;
 
   /* Minimal Shadows */
   --shadow-sm:  0 1px 4px rgba(0, 0, 0, 0.5);
   --shadow-md:  0 8px 24px rgba(0, 0, 0, 0.55);
   --shadow-lg:  0 18px 48px rgba(0, 0, 0, 0.65);
 
-  /* One Accent — crimson, used sparingly */
-  --accent:          #e5333a;
-  --accent-hover:    #ff4a51;
-  --accent-glow:     rgba(229, 51, 58, 0.35);
-  --accent-gradient: linear-gradient(135deg, #c0242a 0%, #e5333a 100%);
-  --accent-burn:     linear-gradient(90deg, #e5333a 0%, #ff7a00 55%, #c0242a 100%);
+  /* Monochrome Editorial Accent */
+  --accent:          #ede7e9;
+  --accent-hover:    #ffffff;
+  --accent-glow:     rgba(237, 231, 233, 0.25);
+  --accent-gradient: linear-gradient(135deg, #2a2728 0%, #4a4547 100%);
+  --accent-burn:     linear-gradient(90deg, #ede7e9 0%, #8a8080 100%);
 
   /* Utility Accents (kept for game/UI logic, used minimally) */
-  --accent-lavender: #e5333a;
+  --accent-lavender: #ede7e9;
   --accent-sage:     #10b981;
   --accent-amber:    #f59e0b;
-  --accent-rose:     #e5333a;
+  --accent-rose:     #ede7e9;
   --accent-sky:      #38bdf8;
 
   /* Typography */
@@ -72,13 +72,13 @@
   --theme-transition:   0.25s ease-out;
 
   /* Presence Glow */
-  --presence-calm-glow:   rgba(229, 51, 58, 0.15);
-  --presence-active-glow: rgba(229, 51, 58, 0.65);
+  --presence-calm-glow:   rgba(255, 255, 255, 0.1);
+  --presence-active-glow: rgba(255, 255, 255, 0.4);
 }
 
 /* ----------------------------------------------------
    LIGHT MODE: "Linen"
-   Warm cream backdrop, near-black ink, same one crimson accent
+   Warm cream backdrop, near-black ink, monochrome accent
    ---------------------------------------------------- */
 [data-theme='light'] {
   /* Warm Linen Surfaces */
@@ -94,26 +94,26 @@
   /* Ink-on-linen borders */
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-glass:  rgba(0, 0, 0, 0.12);
-  --border-glow:   rgba(192, 36, 42, 0.2);
-  --border-focus:  #c0242a;
+  --border-glow:   rgba(0, 0, 0, 0.15);
+  --border-focus:  #111111;
 
   /* Soft natural shadows */
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.07);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.10);
 
-  /* One Accent — muted burgundy-crimson */
-  --accent:          #c0242a;
-  --accent-hover:    #d42b32;
-  --accent-glow:     rgba(192, 36, 42, 0.22);
-  --accent-gradient: linear-gradient(135deg, #a31d24 0%, #c0242a 100%);
-  --accent-burn:     linear-gradient(90deg, #c0242a 0%, #d9534f 50%, #f59e0b 100%);
+  /* Monochrome Editorial Accent */
+  --accent:          #111111;
+  --accent-hover:    #2b2b2b;
+  --accent-glow:     rgba(17, 17, 17, 0.2);
+  --accent-gradient: linear-gradient(135deg, #e5e0d8 0%, #ccc5bb 100%);
+  --accent-burn:     linear-gradient(90deg, #111111 0%, #5a5450 100%);
 
   /* Utility Accents */
-  --accent-lavender: #c0242a;
+  --accent-lavender: #111111;
   --accent-sage:     #059669;
   --accent-amber:    #d97706;
-  --accent-rose:     #c0242a;
+  --accent-rose:     #111111;
   --accent-sky:      #0284c7;
 
   /* Near-black ink typography */
@@ -124,8 +124,8 @@
   --doodle-color:     rgba(0, 0, 0, 0.06);
 
   /* Presence Glow */
-  --presence-calm-glow:   rgba(192, 36, 42, 0.1);
-  --presence-active-glow: rgba(192, 36, 42, 0.45);
+  --presence-calm-glow:   rgba(0, 0, 0, 0.08);
+  --presence-active-glow: rgba(0, 0, 0, 0.3);
 }
 
 /* ----------------------------------------------------
@@ -449,7 +449,7 @@ button:active {
   bottom: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(90deg, #e5333a 0%, #ff7a00 55%, #c0242a 100%);
+  background: var(--accent-burn);
   border-radius: 2px;
   width: 100%;
   animation: emberBurnDown 12s linear forwards;
@@ -457,11 +457,11 @@ button:active {
 }
 
 @keyframes emberBurnDown {
-  0%   { width: 100%; box-shadow: 0 0 4px 1px rgba(229,51,58,0.3);  opacity: 1; }
-  70%  { width: 30%;  box-shadow: 0 0 6px 2px rgba(255,100,0,0.45); opacity: 1; }
-  85%  { width: 15%;  box-shadow: 0 0 10px 3px rgba(229,51,58,0.65); opacity: 1; }
-  92%  { width: 8%;   box-shadow: 0 0 14px 5px rgba(229,51,58,0.85); opacity: 1; }
-  100% { width: 0%;   box-shadow: 0 0 18px 6px rgba(229,51,58,0.95); opacity: 0; }
+  0%   { width: 100%; box-shadow: 0 0 4px 1px var(--border-glow); opacity: 1; }
+  70%  { width: 30%;  box-shadow: 0 0 6px 2px var(--border-glow); opacity: 1; }
+  85%  { width: 15%;  box-shadow: 0 0 8px 3px var(--border-glow); opacity: 1; }
+  92%  { width: 8%;   box-shadow: 0 0 10px 4px var(--border-glow); opacity: 1; }
+  100% { width: 0%;   box-shadow: 0 0 12px 5px var(--border-glow); opacity: 0; }
 }
 
 @keyframes messageVaporize {

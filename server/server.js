@@ -968,6 +968,36 @@ function launchGame(roomId, gameType) {
   }
 }
 
+function resolveGamePoll(roomId, passed, reason = 'quorum') {
+  const room = rooms.get(roomId);
+  if (!room || !room.pendingGamePoll) return;
+
+  const poll = room.pendingGamePoll;
+  if (poll.timer) {
+    clearTimeout(poll.timer);
+    poll.timer = null;
+  }
+
+  const targetGameType = poll.targetGameType;
+  room.pendingGamePoll = null;
+
+  io.to(roomId).emit('game_poll_resolved', {
+    passed: Boolean(passed),
+    gameType: targetGameType,
+    reason
+  });
+
+  if (passed) {
+    if (room.gameSwitchTimeout) {
+      clearTimeout(room.gameSwitchTimeout);
+    }
+    room.gameSwitchTimeout = setTimeout(() => {
+      room.gameSwitchTimeout = null;
+      launchGame(roomId, targetGameType);
+    }, 5000);
+  }
+}
+
 // ==========================================
 // 4. SOCKET.IO EVENT LOOP
 // ==========================================
@@ -1483,7 +1513,103 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Switch or Toggle Game
+  // Propose Game Switch with Quorum Poll
+  socket.on('propose_game_switch', ({ gameType }) => {
+    if (!currentRoomId || !currentUser) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+
+    if (room.pendingGamePoll) {
+      socket.emit('game_poll_error', { message: 'A game switch confirmation poll is already in progress.' });
+      return;
+    }
+
+    if (room.game.type === gameType) return;
+
+    const totalUsers = room.users.size;
+    if (totalUsers <= 1) {
+      // Single occupant room: automatic pass with 5s switch transition
+      io.to(currentRoomId).emit('game_poll_resolved', {
+        passed: true,
+        gameType,
+        reason: 'single_occupant'
+      });
+      if (room.gameSwitchTimeout) clearTimeout(room.gameSwitchTimeout);
+      room.gameSwitchTimeout = setTimeout(() => {
+        room.gameSwitchTimeout = null;
+        launchGame(currentRoomId, gameType);
+      }, 5000);
+      return;
+    }
+
+    const totalNeeded = Math.floor(totalUsers / 2) + 1; // Strictly >50% of connected members
+    const votes = new Map();
+    votes.set(socket.id, true); // Proposer automatically votes yes
+
+    const pollObj = {
+      targetGameType: gameType,
+      proposer: currentUser,
+      votes,
+      startedAt: Date.now(),
+      durationMs: 15000,
+      timer: null
+    };
+
+    room.pendingGamePoll = pollObj;
+
+    io.to(currentRoomId).emit('game_poll_started', {
+      targetGameType: gameType,
+      proposer: currentUser,
+      startedAt: Date.now(),
+      durationMs: 15000,
+      yesCount: 1,
+      noCount: 0,
+      totalNeeded,
+      totalUsers
+    });
+
+    pollObj.timer = setTimeout(() => {
+      if (room.pendingGamePoll === pollObj) {
+        resolveGamePoll(currentRoomId, false, 'timeout');
+      }
+    }, 15000);
+  });
+
+  socket.on('vote_game_switch', ({ vote }) => {
+    if (!currentRoomId || !currentUser) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.pendingGamePoll) return;
+
+    room.pendingGamePoll.votes.set(socket.id, Boolean(vote));
+
+    let yesCount = 0;
+    let noCount = 0;
+    for (const [sId, v] of room.pendingGamePoll.votes.entries()) {
+      if (room.users.has(sId)) {
+        if (v) yesCount++;
+        else noCount++;
+      }
+    }
+
+    const totalUsers = room.users.size;
+    const totalNeeded = Math.floor(totalUsers / 2) + 1;
+
+    io.to(currentRoomId).emit('game_poll_update', {
+      targetGameType: room.pendingGamePoll.targetGameType,
+      yesCount,
+      noCount,
+      totalNeeded,
+      totalUsers
+    });
+
+    if (yesCount >= totalNeeded) {
+      resolveGamePoll(currentRoomId, true, 'quorum_reached');
+    } else if (noCount > (totalUsers - totalNeeded)) {
+      resolveGamePoll(currentRoomId, false, 'rejected');
+    }
+  });
+
+  // Switch or Toggle Game (legacy / fallback support)
   socket.on('switch_game', ({ gameType }) => {
     if (!currentRoomId) return;
     launchGame(currentRoomId, gameType);
@@ -1663,6 +1789,39 @@ io.on('connection', (socket) => {
 
         if (room.game.isActive && room.game.type === 'scribble' && room.game.currentDrawer?.id === currentUser?.id) {
           endScribbleRound(currentRoomId, 'The drawer stepped out.');
+        }
+
+        // Re-evaluate pending game switch poll if a user leaves
+        if (room.pendingGamePoll) {
+          room.pendingGamePoll.votes.delete(socket.id);
+          if (room.users.size === 0) {
+            resolveGamePoll(currentRoomId, false, 'room_empty');
+          } else {
+            let yesCount = 0;
+            let noCount = 0;
+            for (const [sId, v] of room.pendingGamePoll.votes.entries()) {
+              if (room.users.has(sId)) {
+                if (v) yesCount++;
+                else noCount++;
+              }
+            }
+            const totalUsers = room.users.size;
+            const totalNeeded = Math.floor(totalUsers / 2) + 1;
+
+            if (yesCount >= totalNeeded) {
+              resolveGamePoll(currentRoomId, true, 'quorum_reached');
+            } else if (noCount > (totalUsers - totalNeeded)) {
+              resolveGamePoll(currentRoomId, false, 'rejected');
+            } else {
+              io.to(currentRoomId).emit('game_poll_update', {
+                targetGameType: room.pendingGamePoll.targetGameType,
+                yesCount,
+                noCount,
+                totalNeeded,
+                totalUsers
+              });
+            }
+          }
         }
 
         if (!room.isPermanent && room.users.size === 0) {

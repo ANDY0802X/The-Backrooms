@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Room.css';
 import { sounds } from '../utils/sound';
+import { useSoundVolume } from '../utils/useSound';
 import confetti from 'canvas-confetti';
 
 const PALETTE = [
@@ -17,6 +18,14 @@ const PALETTE = [
 
 const EMOJI_REACTIONS = ['💜', '☕', '🌿', '🔥', '😭', '🫂', '✨', '🏆'];
 
+const GAME_NAMES = {
+  scribble: '🎨 Campus Scribble',
+  trivia: '⚡ Trivia Blitz',
+  wordchain: '🔗 Word Chain',
+  emojipop: '💥 Emoji Pop',
+  truthvent: '🎭 Truth, Vent & Dare'
+};
+
 export default function RoomView({
   socket,
   roomId,
@@ -25,6 +34,8 @@ export default function RoomView({
   theme = 'dark',
   onToggleTheme
 }) {
+  const { audioLabel, cycleVolume } = useSoundVolume();
+
   // Room state
   const [roomData, setRoomData] = useState({
     name: 'Virtual Lounge',
@@ -41,6 +52,12 @@ export default function RoomView({
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [floatingParticles, setFloatingParticles] = useState([]);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Game Switch Confirmation Quorum Poll State
+  const [gameSwitchPoll, setGameSwitchPoll] = useState(null);
+  const [userVotedSwitch, setUserVotedSwitch] = useState(null);
+  const [gameSwitchTransition, setGameSwitchTransition] = useState(null);
+  const [pollDismissMessage, setPollDismissMessage] = useState(null);
 
   // Multi-Game State
   const [gameState, setGameState] = useState({
@@ -291,6 +308,49 @@ export default function RoomView({
       setCurrentPoll(poll);
     });
 
+    // Game Switch Quorum Poll Listeners
+    socket.on('game_poll_started', (data) => {
+      sounds.playChime();
+      setGameSwitchPoll(data);
+      setUserVotedSwitch(socket.id === data.proposer?.socketId ? true : null);
+    });
+
+    socket.on('game_poll_update', (data) => {
+      setGameSwitchPoll(prev => prev ? ({
+        ...prev,
+        yesCount: data.yesCount,
+        noCount: data.noCount,
+        totalNeeded: data.totalNeeded,
+        totalUsers: data.totalUsers
+      }) : null);
+    });
+
+    socket.on('game_poll_resolved', (data) => {
+      setGameSwitchPoll(null);
+      setUserVotedSwitch(null);
+      if (data.passed) {
+        sounds.playSuccess();
+        setGameSwitchTransition({
+          gameType: data.gameType,
+          secondsLeft: 5
+        });
+      } else {
+        sounds.playBoing();
+        setPollDismissMessage(
+          data.reason === 'timeout'
+            ? 'Game switch proposal timed out.'
+            : 'Game switch proposal was declined.'
+        );
+        setTimeout(() => setPollDismissMessage(null), 3500);
+      }
+    });
+
+    socket.on('game_poll_error', (data) => {
+      sounds.playBoing();
+      setPollDismissMessage(data.message || 'Game poll error');
+      setTimeout(() => setPollDismissMessage(null), 3000);
+    });
+
     return () => {
       socket.off('room_joined_data');
       socket.off('user_joined');
@@ -312,6 +372,10 @@ export default function RoomView({
       socket.off('emoji_targets_respawn');
       socket.off('emoji_target_popped');
       socket.off('poll_updated');
+      socket.off('game_poll_started');
+      socket.off('game_poll_update');
+      socket.off('game_poll_resolved');
+      socket.off('game_poll_error');
       socket.emit('leave_room', { roomId });
     };
   }, [socket, roomId, userProfile]);
@@ -494,11 +558,29 @@ export default function RoomView({
     }, 1800);
   };
 
-  // Game Control Handlers
+  // 5-Second Transition Countdown on Passed Game Poll
+  useEffect(() => {
+    if (!gameSwitchTransition) return;
+    const interval = setInterval(() => {
+      setGameSwitchTransition(prev => {
+        if (!prev) return null;
+        if (prev.secondsLeft <= 1) {
+          clearInterval(interval);
+          return null;
+        }
+        return { ...prev, secondsLeft: prev.secondsLeft - 1 };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [gameSwitchTransition]);
+
+  // Game Control Handlers (Confirmation Quorum Poll Gate)
   const handleSwitchGame = (gameType) => {
-    sounds.playBoing();
-    setGameState(prev => ({ ...prev, type: gameType }));
-    if (socket) socket.emit('switch_game', { gameType });
+    if (gameState.type === gameType) return;
+    sounds.playPop();
+    if (socket) {
+      socket.emit('propose_game_switch', { gameType });
+    }
   };
 
   const handleToggleGame = () => {
@@ -706,6 +788,18 @@ export default function RoomView({
             ))}
           </div>
 
+          {/* Audio Volume Control */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.94 }}
+            className="btn-pill-secondary hover-lift"
+            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+            onClick={cycleVolume}
+            title="Adjust Audio Volume / Mute"
+          >
+            {audioLabel}
+          </motion.button>
+
           {/* Theme Toggle */}
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -722,6 +816,125 @@ export default function RoomView({
           </motion.button>
         </div>
       </header>
+
+      {/* Confirmation Quorum Poll for Game Switch */}
+      <AnimatePresence>
+        {gameSwitchPoll && (
+          <motion.div
+            className="game-switch-poll-card"
+            initial={{ opacity: 0, y: -24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.96 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="game-switch-poll-header">
+              <div className="game-switch-poll-info">
+                <span className="poll-badge">VOTE TO SWITCH GAME</span>
+                <h4 className="poll-game-target">
+                  {GAME_NAMES[gameSwitchPoll.targetGameType] || gameSwitchPoll.targetGameType}
+                </h4>
+                <p className="poll-proposer-text">
+                  Proposed by <strong>{gameSwitchPoll.proposer?.name || 'A classmate'}</strong>
+                </p>
+              </div>
+              <div className="poll-tally-pill">
+                <span className="poll-tally-count">{gameSwitchPoll.yesCount} / {gameSwitchPoll.totalNeeded} needed</span>
+                <span className="poll-quorum-sub">(&gt;50% of {gameSwitchPoll.totalUsers} online)</span>
+              </div>
+            </div>
+
+            {/* Quorum Progress Bar */}
+            <div className="poll-progress-track">
+              <div
+                className="poll-progress-fill"
+                style={{ width: `${Math.min(100, (gameSwitchPoll.yesCount / gameSwitchPoll.totalNeeded) * 100)}%` }}
+              />
+            </div>
+
+            <div className="game-switch-poll-actions">
+              {userVotedSwitch === null ? (
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    className="btn-pill-primary poll-vote-btn"
+                    onClick={() => {
+                      sounds.playPop();
+                      setUserVotedSwitch(true);
+                      socket?.emit('vote_game_switch', { vote: true });
+                    }}
+                  >
+                    ✓ Vote Yes (Switch)
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    className="btn-pill-secondary poll-vote-btn"
+                    onClick={() => {
+                      sounds.playPop();
+                      setUserVotedSwitch(false);
+                      socket?.emit('vote_game_switch', { vote: false });
+                    }}
+                  >
+                    ✕ Vote No (Stay)
+                  </motion.button>
+                </>
+              ) : (
+                <div className="poll-voted-status">
+                  <span>{userVotedSwitch ? '✓ You voted to Switch' : '✕ You voted to Stay'}</span>
+                  <span className="poll-waiting-note">— waiting for lounge quorum...</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 5-Second Transition Overlay upon Passed Poll */}
+      <AnimatePresence>
+        {gameSwitchTransition && (
+          <motion.div
+            className="game-switch-transition-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="game-switch-transition-box"
+              initial={{ scale: 0.9, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 15 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="transition-icon">🚀</span>
+              <h3>Switching to {GAME_NAMES[gameSwitchTransition.gameType] || gameSwitchTransition.gameType}</h3>
+              <p className="transition-countdown">Launching in <strong>{gameSwitchTransition.secondsLeft}s</strong>...</p>
+              <div className="transition-bar-track">
+                <motion.div
+                  className="transition-bar-fill"
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 5, ease: 'linear' }}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Poll Notification Toast */}
+      <AnimatePresence>
+        {pollDismissMessage && (
+          <motion.div
+            className="game-poll-toast"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+          >
+            <span>ℹ️ {pollDismissMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Split Layout: Left In-Window Arena | Right Real-Time Chat */}
       <main className="room-split-layout">

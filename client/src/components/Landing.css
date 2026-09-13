@@ -57,19 +57,6 @@
   color: var(--text-primary);
 }
 
-.brand-edition {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  padding: 2px 7px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-well);
-  border: 1px solid var(--border-subtle);
-  margin-left: 6px;
-}
-
 .nav-actions {
   display: flex;
   gap: 10px;
@@ -92,32 +79,8 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 14px;
-  padding: 20px 0;
-}
-
-/* Top Pill Badge */
-.backrooms-tag-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
-  border-radius: var(--radius-full);
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.tag-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
+  gap: 16px;
+  padding: 16px 0;
 }
 
 /* Big Hero Title with Editorial Typography */
@@ -161,7 +124,7 @@
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.03em;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 /* Central Editorial Card Container */
@@ -174,7 +137,7 @@
   padding: 24px 22px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   box-shadow: var(--shadow-md);
   position: relative;
   box-sizing: border-box;
@@ -232,14 +195,14 @@
 /* Avatar Carousel Stage */
 .backrooms-avatar-stage {
   width: 100%;
-  height: 110px;
+  height: 140px;
   background: var(--bg-well);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
+  padding: 0 20px;
   position: relative;
   box-sizing: border-box;
 }
@@ -247,10 +210,10 @@
 /* Top-Right Shuffle Button */
 .backrooms-shuffle-btn {
   position: absolute;
-  top: 9px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -261,6 +224,7 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  z-index: 2;
 }
 
 .backrooms-shuffle-btn:hover {
@@ -270,19 +234,21 @@
 
 /* Avatar Nav Arrows */
 .backrooms-nav-arrow {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   line-height: 1;
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  z-index: 2;
 }
 
 .backrooms-nav-arrow:hover {
@@ -293,11 +259,12 @@
 /* Avatar Center Orbit Ring */
 .backrooms-avatar-orbit {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 104px;
+  height: 104px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .backrooms-orbit-ring {
@@ -309,18 +276,18 @@
 
 .backrooms-orbit-dot {
   position: absolute;
-  top: -3px;
+  top: -4px;
   left: 50%;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--text-primary);
   transform: translateX(-50%);
 }
 
 .backrooms-avatar-preview {
-  width: 58px;
-  height: 58px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -341,7 +308,7 @@
 }
 
 .backrooms-avatar-emoji {
-  font-size: 2.2rem;
+  font-size: 3.4rem;
   line-height: 1;
   user-select: none;
 }
@@ -376,26 +343,6 @@
 
 .backrooms-btn-primary:hover .arrow-glyph {
   transform: translateX(3px);
-}
-
-/* Secondary Action Button — Neutral Border */
-.backrooms-btn-secondary {
-  width: 100%;
-  height: 42px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  font-family: var(--font-main);
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.backrooms-btn-secondary:hover {
-  background: var(--bg-surface-elevated);
-  border-color: var(--text-muted);
 }
 
 /* Room Code Join Form */

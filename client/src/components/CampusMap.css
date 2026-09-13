@@ -262,60 +262,6 @@
   transform: scale(0.95);
 }
 
-/* Place Pin Mode Banner */
-.map-placing-banner {
-  position: absolute;
-  top: 72px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #111111;
-  color: #ffffff;
-  padding: 8px 18px;
-  border-radius: var(--radius-full, 9999px);
-  font-size: 0.8rem;
-  font-family: var(--font-mono, monospace);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 1001;
-  pointer-events: auto;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.campus-map-wrapper[data-theme='dark'] .map-placing-banner {
-  background: var(--bg-surface-elevated);
-  color: var(--text-primary);
-  border-color: var(--border-subtle);
-}
-
-.map-placing-cancel-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  color: #ffffff;
-  border-radius: var(--radius-full, 9999px);
-  padding: 3px 10px;
-  font-size: 0.72rem;
-  font-family: var(--font-mono, monospace);
-  cursor: pointer;
-  font-weight: 700;
-  transition: background 0.18s;
-}
-
-.map-placing-cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.campus-map-wrapper.placing-mode,
-.campus-map-wrapper.placing-mode .leaflet-container,
-.campus-map-wrapper.placing-mode .leaflet-interactive,
-.campus-map-wrapper.placing-mode path.leaflet-interactive,
-.campus-map-wrapper.placing-mode svg {
-  cursor: crosshair !important;
-}
-
 /* Enhanced modern emojis */
 .pin-icon-avatar,
 .pin-popup-icon-box,
@@ -334,40 +280,6 @@
 .pin-marker-pill:hover .pin-icon-avatar {
   transform: scale(1.2);
   filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.3));
-}
-
-/* Modern sleek Drop Pin Button */
-.map-drop-pin-btn {
-  background: #111111;
-  color: #ffffff !important;
-  border: 1px solid #111111 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 5px 14px;
-}
-
-.campus-map-wrapper[data-theme='dark'] .map-drop-pin-btn {
-  background: var(--accent);
-  border-color: var(--accent) !important;
-  box-shadow: 0 2px 10px var(--accent-glow);
-}
-
-.map-drop-pin-btn:hover {
-  transform: translateY(-1px) scale(1.02);
-}
-
-.map-drop-pin-btn.active-placing {
-  background: #e5333a !important;
-  border-color: #e5333a !important;
-  color: #ffffff !important;
-  animation: pulse-drop-pin 1.4s infinite;
-}
-
-@keyframes pulse-drop-pin {
-  0% { box-shadow: 0 0 0 0 rgba(229, 51, 58, 0.6); }
-  70% { box-shadow: 0 0 0 8px rgba(229, 51, 58, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(229, 51, 58, 0); }
 }
 
 /* ===================================================
@@ -499,9 +411,9 @@
 }
 
 .pin-dark-room .pin-icon-avatar {
-  background: rgba(229, 51, 58, 0.2);
-  color: #ff4a51;
-  border: 1px solid rgba(229, 51, 58, 0.4);
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
 }
 
 .pin-dark-room .pin-pulse-dot {
@@ -509,24 +421,24 @@
   height: 6px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 0 rgba(229, 51, 58, 0.7);
-  animation: pulsePingRed 2s infinite cubic-bezier(0.66, 0, 0, 1);
+  box-shadow: 0 0 0 0 var(--border-glow);
+  animation: pulsePingNeutral 2s infinite cubic-bezier(0.66, 0, 0, 1);
   flex-shrink: 0;
 }
 
 .custom-map-pin:hover .pin-dark-room {
   border-color: var(--accent);
-  box-shadow: 0 6px 20px rgba(229, 51, 58, 0.35);
+  box-shadow: 0 6px 20px var(--border-glow);
 }
 
 .custom-map-pin:hover .pin-dark-room::after {
   border-top-color: var(--accent);
 }
 
-@keyframes pulsePingRed {
-  0% { box-shadow: 0 0 0 0 rgba(229, 51, 58, 0.7); }
-  70% { box-shadow: 0 0 0 8px rgba(229, 51, 58, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(229, 51, 58, 0); }
+@keyframes pulsePingNeutral {
+  0% { box-shadow: 0 0 0 0 var(--border-glow); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
 /* 3. Marketplace Pin */
@@ -590,12 +502,12 @@
   background: #141212;
   border: 2px solid var(--accent);
   color: #ffffff;
-  box-shadow: 0 0 14px rgba(229, 51, 58, 0.4);
+  box-shadow: 0 0 14px var(--border-glow);
 }
 
 .custom-cluster-badge.cluster-dark:hover {
   transform: scale(1.12);
-  box-shadow: 0 0 20px rgba(229, 51, 58, 0.65);
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 
 /* ===================================================

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Lobby.css';
 import { sounds } from '../utils/sound';
+import { useSoundVolume } from '../utils/useSound';
 import Reveal from './Reveal';
 import CampusMap from './CampusMap';
 import LostFoundModal from './LostFoundModal';
@@ -10,11 +11,11 @@ import TradeModal from './TradeModal';
 const CATEGORIES = ['All', 'General', 'Study', 'Rant', 'Art', 'Mini-Game'];
 
 const GAME_OPTIONS = [
-  { id: 'scribble', name: '🎨 Campus Scribble (Speed Pictionary)' },
-  { id: 'trivia', name: '⚡ Campus Trivia Blitz (14s Countdown)' },
-  { id: 'wordchain', name: '🔗 Rapid Word Chain (Combo Builder)' },
-  { id: 'emojipop', name: '💥 Emoji Pop Reflex (Fast Reaction)' },
-  { id: 'truthvent', name: '🎭 Truth, Vent & Dare (Confessions)' }
+  { id: 'scribble', name: '🎨 Campus Scribble' },
+  { id: 'trivia', name: '⚡ Trivia Blitz' },
+  { id: 'wordchain', name: '🔗 Word Chain' },
+  { id: 'emojipop', name: '💥 Emoji Pop' },
+  { id: 'truthvent', name: '🎭 Truth, Vent & Dare' }
 ];
 
 export default function Lobby({
@@ -37,13 +38,12 @@ export default function Lobby({
 }) {
   const [viewMode, setViewMode] = useState('map'); // 'map' | 'list'
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
+  const { audioLabel, cycleVolume } = useSoundVolume();
 
   // Pin placement & creation state
-  const [isPlacingPin, setIsPlacingPin] = useState(false);
   const [pinCoords, setPinCoords] = useState({ lat: 23.17504, lng: 80.02921 });
   const [activePinTab, setActivePinTab] = useState('room'); // 'room' | 'marketplace' | 'lostfound'
   const [activeLostFoundPin, setActiveLostFoundPin] = useState(null);
@@ -82,13 +82,7 @@ export default function Lobby({
   const [lfPhotoUrl, setLfPhotoUrl] = useState('');
 
   const filteredRooms = rooms.filter(room => {
-    const matchesCat = selectedCategory === 'All' || room.category === selectedCategory;
-    const matchesSearch =
-      room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      room.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (room.code && room.code.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (room.tags && room.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
-    return matchesCat && matchesSearch;
+    return selectedCategory === 'All' || room.category === selectedCategory;
   });
 
   const getRoomPurpose = (gameType, category) => {
@@ -241,6 +235,15 @@ export default function Lobby({
             whileHover={{ scale: 1.05, y: -1 }}
             whileTap={{ scale: 0.94 }}
             className="btn-pill-secondary"
+            onClick={cycleVolume}
+            title="Adjust Audio Volume / Mute"
+          >
+            {audioLabel}
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.94 }}
+            className="btn-pill-secondary"
             onClick={() => {
               sounds.playPop();
               onToggleTheme();
@@ -301,9 +304,6 @@ export default function Lobby({
             >
               🎲 Re-Roll Alias
             </motion.button>
-            <span className="badge-pill hover-lift" style={{ background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-sage)' }}>
-              🛡️ Ephemeral ID
-            </span>
           </div>
         </section>
       </Reveal>
@@ -341,17 +341,6 @@ export default function Lobby({
       <Reveal index={2}>
         <section className="lobby-controls-section">
           <div className="controls-top-row">
-            <div className="search-box-wrapper">
-              <span className="search-icon">🔍</span>
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Search lounges by name, tag, code..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
             {/* Segmented View Mode Toggle: Campus Map vs. Room List */}
             <div className="view-mode-toggle">
               <button
@@ -423,14 +412,6 @@ export default function Lobby({
             }}
             onOpenLostFound={(pin) => {
               setActiveLostFoundPin(pin);
-            }}
-            isPlacingPin={isPlacingPin}
-            onStartPlacingPin={() => setIsPlacingPin(true)}
-            onCancelPlacingPin={() => setIsPlacingPin(false)}
-            onMapClickToPlace={(coords) => {
-              setPinCoords(coords);
-              setIsPlacingPin(false);
-              setIsModalOpen(true);
             }}
           />
         </div>
@@ -507,7 +488,7 @@ export default function Lobby({
           {filteredRooms.length === 0 && (
             <div className="glass-panel" style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center' }}>
               <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                No lounges match "{searchQuery}".
+                No lounges found in this category.
               </p>
               <motion.button
                 whileHover={{ scale: 1.03 }}
@@ -786,22 +767,11 @@ export default function Lobby({
                     }}
                   >
                     <div>
-                      <span style={{ color: 'var(--text-muted)' }}>Pin Location: </span>
+                      <span style={{ color: 'var(--text-muted)' }}>Campus Location Pin: </span>
                       <strong style={{ color: 'var(--text-primary)' }}>
                         {pinCoords.lat.toFixed(4)}, {pinCoords.lng.toFixed(4)}
                       </strong>
                     </div>
-                    <button
-                      type="button"
-                      className="btn-pill-secondary"
-                      style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                      onClick={() => {
-                        setIsModalOpen(false);
-                        setIsPlacingPin(true);
-                      }}
-                    >
-                      🎯 Pick on Map
-                    </button>
                   </div>
                 )}
 
