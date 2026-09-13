@@ -29,13 +29,13 @@
 }
 
 .lf-modal-card[data-theme='dark'] {
-  border-color: rgba(245, 158, 11, 0.3);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 24px rgba(245, 158, 11, 0.15);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-lg);
 }
 
 .lf-modal-card[data-theme='light'] {
-  border-color: rgba(26, 26, 26, 0.15);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-lg);
 }
 
 .lf-modal-header {

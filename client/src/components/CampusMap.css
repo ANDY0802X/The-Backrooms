@@ -421,24 +421,16 @@
   height: 6px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 0 var(--border-glow);
-  animation: pulsePingNeutral 2s infinite cubic-bezier(0.66, 0, 0, 1);
   flex-shrink: 0;
 }
 
 .custom-map-pin:hover .pin-dark-room {
-  border-color: var(--accent);
-  box-shadow: 0 6px 20px var(--border-glow);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-sm);
 }
 
 .custom-map-pin:hover .pin-dark-room::after {
-  border-top-color: var(--accent);
-}
-
-@keyframes pulsePingNeutral {
-  0% { box-shadow: 0 0 0 0 var(--border-glow); }
-  70% { box-shadow: 0 0 0 8px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  border-top-color: var(--border-focus);
 }
 
 /* 3. Marketplace Pin */
@@ -500,14 +492,15 @@
 /* Dark Theme Cluster */
 .custom-cluster-badge.cluster-dark {
   background: #141212;
-  border: 2px solid var(--accent);
+  border: 1.5px solid var(--border-subtle);
   color: #ffffff;
-  box-shadow: 0 0 14px var(--border-glow);
+  box-shadow: var(--shadow-sm);
 }
 
 .custom-cluster-badge.cluster-dark:hover {
-  transform: scale(1.12);
-  box-shadow: 0 0 20px var(--accent-glow);
+  transform: scale(1.08);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-md);
 }
 
 /* ===================================================
