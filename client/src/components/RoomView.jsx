@@ -449,7 +449,7 @@ export default function RoomView({
 
     drawSegment(ctx, stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.isEraser, stroke.timestamp);
     strokeHistoryRef.current.push(stroke);
-    if (socket) socket.emit('draw_stroke', { roomId, stroke });
+    if (socket) socket.emit('draw_stroke', stroke);
 
     lastPointRef.current = coords;
   };
